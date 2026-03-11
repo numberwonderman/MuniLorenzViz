@@ -1,1 +1,60 @@
-Discrete Lorenz ExplorerA Numerical Exploration of 3D Sinusoidal MapsThis project is a high-fidelity WebGL visualizer designed to investigate the complex dynamical behavior of the 3D Sinusoidal Map. Built to validate research regarding discrete-time chaotic systems, this tool allows users to witness the transition from stable periodic orbits to hyperchaotic volumes.📐 The MathematicsThe engine iterates a system of nonlinear difference equations. Unlike a continuous Lorenz system (which uses differential equations), this discrete map utilizes jumps to define its trajectory, making the "twisted-ness" of its manifold particularly intricate.The system is defined as:$$x_{n+1} = y_n$$$$y_{n+1} = \sin(z_n)$$$$z_{n+1} = a + (b \cdot x_n) + (c \cdot y_n) - \sin(z_n^2)$$Key Mathematical Phenomena:Stretching & Folding: The linear combination of $b$ and $c$ scales the phase space, while the $\sin(z^2)$ term acts as a nonlinear "folder," creating the fractal layers seen in the attractors.Bifurcation Sequences: By varying parameter $a$, the system undergoes a series of period-doubling events—splitting a single loop into the complex "butterfly" structures.Hyperchaos: In high-energy states ($b > 3.0$), the system exhibits multiple positive Lyapunov exponents, resulting in a 3D volume-filling attractor.🚀 Replicating the Research (Muni et al.)This software was specifically tuned to replicate key findings in modern chaos theory literature (specifically Figures 6 and 10 of the Muni study). Use the following presets in the control panel:1. The "Twisted Ribbon" (Fig 10h)This represents a fully developed strange attractor where the manifold folds back on itself in a non-orientable fashion.a: 0.015b: 0.8c: 0.992. The "Hyperchaotic Cube" (Fig 6a)At these parameters, the "butterfly" wings expand so violently they fill a 3D bounding box.a: 0.3b: 3.9c: 0.99🛠️ Technical StackCore: JavaScript (ES6+)Rendering: Three.js (WebGL)Styling: Tailwind CSS for a responsive, dark-mode research interface.Optimization: Uses THREE.BufferGeometry with Float32BufferAttribute to maintain 60 FPS even while rendering $100,000+$ iterations.👨‍🔬 About the AuthorDeveloped by a B.S. Mathematics graduate (Arcadia University, Class of 2015), this tool was created to bridge the gap between abstract dynamical equations and visual topological intuition."Chaos is not a lack of order, but a more complex type of order."How to RunOpen the index.html file in any modern web browser.Adjust the Parameters based on the table above.Click Generate Attractor.Use the Mouse to rotate around the 3D manifold and inspect the "twisted" internal structure.
+
+---
+
+# Discrete Lorenz Explorer
+
+### A Numerical Exploration of the 3D Sinusoidal Map
+
+The **Discrete Lorenz Explorer** is a high-performance WebGL visualizer built to investigate the complex dynamical behavior, bifurcations, and hyperchaos of the 3D Sinusoidal Map. This project serves as a numerical validation tool for the research presented by **Sishu Muni** regarding discrete-time Lorenz-like attractors.
+
+## 📐 The Mathematics
+
+This engine simulates a system of nonlinear difference equations. Unlike a continuous Lorenz system defined by differential equations, this **discrete map** reveals a unique "braided" internal structure due to the iterative nature of its state transitions.
+
+The system is defined by:
+
+$$x_{n+1} = y_n$$
+
+$$y_{n+1} = \sin(z_n)$$
+
+$$z_{n+1} = a + (b \cdot x_n) + (c \cdot y_n) - \sin(z_n^2)$$
+
+### Key Topological Features:
+
+* **The "Twisted" Manifold:** The $\sin(z^2)$ term acts as a nonlinear folding mechanism. As $z$ increases, the frequency of the "fold" increases quadratically, creating a non-orientable, Möbius-like geometry.
+* **Period-Doubling Bifurcations:** By varying parameter $a$, the system transitions from simple limit cycles to complex strange attractors.
+* **Hyperchaos:** In high-energy states (e.g., $b=3.9$), the attractor exhibits multiple positive Lyapunov exponents, causing the trajectory to saturate a 3D volume (the "Hyperchaotic Cube").
+
+## 🚀 Research Replication
+
+This tool successfully replicates key findings from the Muni paper. Use these presets to observe the evolution of the attractor:
+
+| State | Parameter $a$ | Parameter $b$ | Parameter $c$ | Fig Ref |
+| --- | --- | --- | --- | --- |
+| **Stable Limit Cycle** | 0.0 | 0.8 | 0.99 | Fig 10(a) |
+| **The Twisted Ribbon** | 0.015 | 0.8 | 0.99 | Fig 10(h) |
+| **Hyperchaotic Cube** | 0.3 | 3.9 | 0.99 | Fig 6(a) |
+
+## 🛠️ Technical Stack
+
+* **Core:** JavaScript (ES6+)
+* **Rendering:** [Three.js](https://threejs.org/) (WebGL)
+* **Geometry:** `THREE.BufferGeometry` with `Float32BufferAttribute` for efficient rendering of $100,000+$ iterations at 60 FPS.
+* **UI:** Tailwind CSS for a responsive, research-oriented interface.
+
+## 📚 References & Citation
+
+This software is a numerical implementation of the models and figures presented in:
+
+**Muni, S.** (2025). *Complexity and Chaos in the 3D Sinusoidal Map: A Discrete Lorenz-like Attractor.* [arXiv:2506.10788](https://arxiv.org/pdf/2506.10788).
+
+> **Note:** This project was developed by a B.S. Mathematics graduate (Arcadia University) to provide an accessible, interactive medium for studying topological "twisted-ness" in discrete-time dynamical systems.
+
+---
+
+### How to Run
+
+1. Clone the repository: `git clone https://github.com/numberwonderman/MuniLorenzViz.git`
+2. Open `index.html` in any modern web browser.
+3. Use the control panel to input research parameters and click **Generate Attractor**.
+4. Interact with the 3D phase space using the mouse to rotate, zoom, and pan.
