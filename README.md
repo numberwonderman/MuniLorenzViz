@@ -24,7 +24,7 @@ $$z_{n+1} = a + (b \cdot x_n) + (c \cdot y_n) - \sin(z_n^2)$$
 * **The "Twisted" Manifold:** The $\sin(z^2)$ term acts as a nonlinear folding mechanism. As $z$ increases, the frequency of the "fold" increases quadratically, creating a non-orientable, Möbius-like geometry.
 * **Period-Doubling Bifurcations:** By varying parameter $a$, the system transitions from simple limit cycles to complex strange attractors.
 * **Hyperchaos:** In high-energy states (e.g., $b=3.9$), the attractor exhibits multiple positive Lyapunov exponents, causing the trajectory to saturate a 3D volume (the "Hyperchaotic Cube").
-
+Discrete Torsion Mapping (Twist Mode): The explorer calculates the discrete torsion $\tau$ at each iteration. Using the triple scalar product of displacement vectors between four consecutive points ($P_{i-3}$ to $P_i$), we approximate how the manifold "lifts" out of its local osculating plane:$$\tau \approx (v_1 \times v_2) \cdot v_3$$This is visualized using a CVD-safe (Color Vision Deficiency) palette:Gold (Positive Torsion): Represents clockwise/upward twisting.Ocean (Negative Torsion): Represents counter-clockwise/downward twisting.
 ## 🚀 Research Replication
 
 This tool successfully replicates key findings from the Muni paper. Use these presets to observe the evolution of the attractor:
@@ -41,6 +41,9 @@ This tool successfully replicates key findings from the Muni paper. Use these pr
 * **Rendering:** [Three.js](https://threejs.org/) (WebGL)
 * **Geometry:** `THREE.BufferGeometry` with `Float32BufferAttribute` for efficient rendering of $100,000+$ iterations at 60 FPS.
 * **UI:** Tailwind CSS for a responsive, research-oriented interface.
+Modular Architecture: Refactored for a clean separation between the Three.js rendering engine, CSS3 styling layer, and the HTML5 skeleton, ensuring high performance during real-time parameter sweeps.
+
+Accessible Design: Implemented a high-contrast, accessible color scheme to ensure the "twistedness" of the manifold is legible to researchers with various forms of color blindness (Protanopia/Deuteranopia).
 
 ## 📚 References & Citation
 

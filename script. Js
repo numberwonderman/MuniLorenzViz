@@ -1,0 +1,131 @@
+let scene, camera, renderer, controls, attractorObject;
+let lineState = true;
+let twistMode = false;
+
+// --- Math Engine ---
+const generateLorenzPath = (a, b, c, iterations) => {
+    let x = 0.1, y = 0.1, z = 0.1;
+    const points = [];
+    const colors = [];
+    const colorStart = new THREE.Color(0x6366f1);
+    const colorEnd = new THREE.Color(0x22d3ee);
+    const twistColorPos = new THREE.Color(0xff0055);
+    const twistColorNeg = new THREE.Color(0x0055ff);
+
+    for (let i = 0; i < iterations; i++) {
+        let nextX = y;
+        let nextY = Math.sin(z);
+        let nextZ = a + (b * x) + (c * y) - Math.sin(z * z);
+
+        x = nextX; y = nextY; z = nextZ;
+        const p = new THREE.Vector3(x * 25, y * 25, z * 25);
+        points.push(p);
+
+        if (twistMode && points.length > 3) {
+            // Discrete Torsion calculation for Dr. Muni
+            const v1 = new THREE.Vector3().subVectors(points[i], points[i-1]);
+            const v2 = new THREE.Vector3().subVectors(points[i-1], points[i-2]);
+            const v3 = new THREE.Vector3().subVectors(points[i-2], points[i-3]);
+            const torsion = new THREE.Vector3().crossVectors(v1, v2).dot(v3);
+            const twistFactor = Math.tanh(torsion * 50); 
+            const vColor = new THREE.Color().copy(twistColorNeg).lerp(twistColorPos, (twistFactor + 1) / 2);
+            colors.push(vColor.r, vColor.g, vColor.b);
+        } else {
+            const lerpFactor = i / iterations;
+            const vColor = new THREE.Color().copy(colorStart).lerp(colorEnd, lerpFactor);
+            colors.push(vColor.r, vColor.g, vColor.b);
+        }
+    }
+    return { points, colors };
+};
+
+function buildAttractorObject(data) {
+    const geometry = new THREE.BufferGeometry().setFromPoints(data.points);
+    geometry.setAttribute('color', new THREE.Float32BufferAttribute(data.colors, 3));
+
+    if (lineState) {
+        return new THREE.Line(geometry, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.8 }));
+    } else {
+        return new THREE.Points(geometry, new THREE.PointsMaterial({ vertexColors: true, size: 0.15, transparent: true, opacity: 0.9 }));
+    }
+}
+
+function initThreeJS() {
+    console.log("Initializing Three.js...");
+    const canvas = document.getElementById('lorenzCanvas');
+    if (!canvas) { console.error("Canvas not found!"); return; }
+
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
+    camera.position.set(30, 30, 30);
+
+    renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+    renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    scene.add(new THREE.AxesHelper(5));
+}
+
+function renderAttractor() {
+    console.log("Generating Attractor...");
+    const a = parseFloat(document.getElementById('paramA').value);
+    const b = parseFloat(document.getElementById('paramB').value);
+    const c = parseFloat(document.getElementById('paramC').value);
+    const iters = parseInt(document.getElementById('iterCount').value);
+
+    if (attractorObject) {
+        scene.remove(attractorObject);
+        attractorObject.geometry.dispose();
+        attractorObject.material.dispose();
+    }
+
+    const data = generateLorenzPath(a, b, c, iters);
+    attractorObject = buildAttractorObject(data);
+    scene.add(attractorObject);
+}
+
+// Ensure the DOM is fully loaded before attaching listeners
+window.onload = () => {
+    initThreeJS();
+
+    const genBtn = document.getElementById('generateBtn');
+    if (genBtn) genBtn.onclick = renderAttractor;
+
+    const toggleBtn = document.getElementById('toggleModeBtn');
+    if (toggleBtn) {
+        toggleBtn.onclick = (e) => {
+            lineState = !lineState;
+            toggleBtn.classList.toggle('active');
+            document.getElementById('toggleLabel').textContent = lineState ? 'Lines' : 'Points';
+            if (attractorObject) renderAttractor();
+        };
+    }
+
+    const twistBtn = document.getElementById('toggleTwistBtn');
+    if (twistBtn) {
+        twistBtn.onclick = () => {
+            twistMode = !twistMode;
+            twistBtn.classList.toggle('active');
+            if (attractorObject) renderAttractor();
+        };
+    }
+
+    const clearBtn = document.getElementById('clearBtn');
+    if (clearBtn) {
+        clearBtn.onclick = () => {
+            if (attractorObject) {
+                scene.remove(attractorObject);
+                attractorObject = null;
+            }
+        };
+    }
+
+    function animate() {
+        requestAnimationFrame(animate);
+        if (controls) controls.update();
+        if (renderer && scene && camera) renderer.render(scene, camera);
+    }
+    animate();
+};
