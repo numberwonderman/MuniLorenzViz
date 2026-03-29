@@ -34,11 +34,8 @@
             </div>
         </div>
 
-        <!-- Primary controls row -->
         <div class="flex gap-4 items-center flex-wrap">
-            <button id="generateBtn" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white py-3 rounded-lg font-bold transition-all">
-                Generate Attractor
-            </button>
+            <button id="generateBtn" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white py-3 rounded-lg font-bold transition-all">Generate Attractor</button>
             <button id="toggleModeBtn" class="toggle-btn">
                 <span class="toggle-indicator"></span>
                 <span id="toggleLabel">Lines</span>
@@ -47,19 +44,16 @@
                 <span class="toggle-indicator"></span>
                 <span>Twist Mode</span>
             </button>
-            <button id="clearBtn" class="px-6 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-bold transition-all">
-                Clear
-            </button>
+            <button id="clearBtn" class="px-6 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-bold transition-all">Clear</button>
         </div>
 
-        <!-- Export controls row -->
         <div class="flex gap-4 items-end flex-wrap mt-4 pt-4 border-t border-slate-600">
             <div class="flex flex-col">
                 <label class="text-gray-400 text-xs font-bold mb-1">Export Resolution:</label>
                 <select id="exportScale" class="bg-slate-700 border border-slate-500 text-white px-3 py-2 rounded-lg text-sm">
-                    <option value="2">2× — Screen quality</option>
-                    <option value="4" selected>4× — Journal quality</option>
-                    <option value="6">6× — Print / poster</option>
+                    <option value="2">2× — Screen</option>
+                    <option value="4" selected>4× — Journal</option>
+                    <option value="6">6× — Print</option>
                 </select>
             </div>
             <div class="flex flex-col">
@@ -67,13 +61,10 @@
                 <select id="exportBg" class="bg-slate-700 border border-slate-500 text-white px-3 py-2 rounded-lg text-sm">
                     <option value="#000000" selected>Black</option>
                     <option value="#ffffff">White</option>
-                    <option value="transparent">Transparent (PNG)</option>
+                    <option value="transparent">Transparent</option>
                 </select>
             </div>
             <button id="exportBtn" class="flex-1 bg-emerald-700 hover:bg-emerald-600 text-white py-2 px-6 rounded-lg font-bold transition-all flex items-center justify-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="inline-block w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"/>
-                </svg>
                 Export Image
             </button>
         </div>
@@ -86,38 +77,30 @@
 
     <script>
         let scene, camera, renderer, controls, attractorObject, axesHelper;
-        let lineState = true;
-        let twistMode = false;
+        let lineState = true, twistMode = false;
 
         const generateLorenzPath = (a, b, c, iterations) => {
             let x = 0.1, y = 0.1, z = 0.1;
-            const points = [];
-            const colors = [];
-            const colorStart = new THREE.Color(0x6366f1);
-            const colorEnd   = new THREE.Color(0x22d3ee);
-            const twistColorPos = new THREE.Color(0xe69f00); // Accessible Gold
-            const twistColorNeg = new THREE.Color(0x0072b2); // Accessible Deep Sea
+            const points = [], colors = [];
+            const colorStart = new THREE.Color(0x6366f1), colorEnd = new THREE.Color(0x22d3ee);
+            const twistColorPos = new THREE.Color(0xe69f00), twistColorNeg = new THREE.Color(0x0072b2);
 
             for (let i = 0; i < iterations; i++) {
                 let nextX = y;
                 let nextY = Math.sin(z);
                 let nextZ = a + (b * x) + (c * y) - Math.sin(z * z);
                 x = nextX; y = nextY; z = nextZ;
-
-                const p = new THREE.Vector3(x * 25, y * 25, z * 25);
-                points.push(p);
+                points.push(new THREE.Vector3(x * 25, y * 25, z * 25));
 
                 if (twistMode && points.length > 3) {
-                    const v1 = new THREE.Vector3().subVectors(points[i],   points[i-1]);
+                    const v1 = new THREE.Vector3().subVectors(points[i], points[i-1]);
                     const v2 = new THREE.Vector3().subVectors(points[i-1], points[i-2]);
                     const v3 = new THREE.Vector3().subVectors(points[i-2], points[i-3]);
                     const torsion = new THREE.Vector3().crossVectors(v1, v2).dot(v3);
-                    const twistFactor = Math.tanh(torsion * 50);
-                    const vColor = new THREE.Color().copy(twistColorNeg).lerp(twistColorPos, (twistFactor + 1) / 2);
+                    const vColor = new THREE.Color().copy(twistColorNeg).lerp(twistColorPos, (Math.tanh(torsion * 50) + 1) / 2);
                     colors.push(vColor.r, vColor.g, vColor.b);
                 } else {
-                    const lerpFactor = i / iterations;
-                    const vColor = new THREE.Color().copy(colorStart).lerp(colorEnd, lerpFactor);
+                    const vColor = new THREE.Color().copy(colorStart).lerp(colorEnd, i / iterations);
                     colors.push(vColor.r, vColor.g, vColor.b);
                 }
             }
@@ -127,10 +110,8 @@
         function buildAttractorObject(data) {
             const geometry = new THREE.BufferGeometry().setFromPoints(data.points);
             geometry.setAttribute('color', new THREE.Float32BufferAttribute(data.colors, 3));
-            const matParams = { vertexColors: true, transparent: true, opacity: 0.8 };
-            return lineState
-                ? new THREE.Line(geometry, new THREE.LineBasicMaterial(matParams))
-                : new THREE.Points(geometry, new THREE.PointsMaterial({ ...matParams, size: 0.15 }));
+            const mat = { vertexColors: true, transparent: true, opacity: 0.8 };
+            return lineState ? new THREE.Line(geometry, new THREE.LineBasicMaterial(mat)) : new THREE.Points(geometry, new THREE.PointsMaterial({...mat, size: 0.15}));
         }
 
         function initThreeJS() {
@@ -140,126 +121,48 @@
             camera.position.set(30, 30, 30);
             renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
             renderer.setSize(canvas.clientWidth, canvas.clientHeight);
-            renderer.setPixelRatio(window.devicePixelRatio);
             controls = new THREE.OrbitControls(camera, renderer.domElement);
-            controls.enableDamping = true;
             axesHelper = new THREE.AxesHelper(5);
             scene.add(axesHelper);
         }
 
         function renderAttractor() {
-            const a     = parseFloat(document.getElementById('paramA').value);
-            const b     = parseFloat(document.getElementById('paramB').value);
-            const c     = parseFloat(document.getElementById('paramC').value);
-            const iters = parseInt(document.getElementById('iterCount').value);
-
-            if (attractorObject) {
-                scene.remove(attractorObject);
-                attractorObject.geometry.dispose();
-                attractorObject.material.dispose();
-            }
+            const a = parseFloat(document.getElementById('paramA').value), b = parseFloat(document.getElementById('paramB').value), c = parseFloat(document.getElementById('paramC').value), iters = parseInt(document.getElementById('iterCount').value);
+            if (attractorObject) { scene.remove(attractorObject); attractorObject.geometry.dispose(); attractorObject.material.dispose(); }
             const data = generateLorenzPath(a, b, c, iters);
             attractorObject = buildAttractorObject(data);
             scene.add(attractorObject);
         }
 
-        // ─── Export logic ────────────────────────────────────────────────────────
         function exportImage() {
-            if (!attractorObject) {
-                showMessage('Generate an attractor first.', 2000);
-                return;
-            }
-
-            const scale    = parseInt(document.getElementById('exportScale').value);
-            const bgValue  = document.getElementById('exportBg').value;
-            const isTransparent = bgValue === 'transparent';
-
-            const canvas = document.getElementById('lorenzCanvas');
-            const w = canvas.clientWidth  * scale;
-            const h = canvas.clientHeight * scale;
-
-            // Off-screen renderer at target resolution
-            const offRenderer = new THREE.WebGLRenderer({
-                antialias: true,
-                preserveDrawingBuffer: true,
-                alpha: isTransparent,
-            });
-            offRenderer.setSize(w, h);
-            offRenderer.setPixelRatio(1); // already scaled manually
-            if (!isTransparent) {
-                offRenderer.setClearColor(new THREE.Color(bgValue), 1);
-            } else {
-                offRenderer.setClearColor(0x000000, 0);
-            }
-
-            // Hide axes for clean journal figure
+            if (!attractorObject) return showMessage('Generate an attractor first.', 2000);
+            const scale = parseInt(document.getElementById('exportScale').value), bg = document.getElementById('exportBg').value;
+            const canvas = document.getElementById('lorenzCanvas'), w = canvas.clientWidth * scale, h = canvas.clientHeight * scale;
+            const off = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true, alpha: bg === 'transparent' });
+            off.setSize(w, h);
+            if (bg !== 'transparent') off.setClearColor(new THREE.Color(bg), 1);
             axesHelper.visible = false;
-
-            offRenderer.render(scene, camera);
-
-            axesHelper.visible = true; // restore
-
-            // Build filename with params
-            const a = document.getElementById('paramA').value;
-            const b = document.getElementById('paramB').value;
-            const c = document.getElementById('paramC').value;
-            const mode = twistMode ? 'twist' : (lineState ? 'lines' : 'points');
-            const filename = `lorenz_a${a}_b${b}_c${c}_${mode}_${scale}x.png`;
-
-            offRenderer.domElement.toBlob((blob) => {
-                const url = URL.createObjectURL(blob);
+            off.render(scene, camera);
+            axesHelper.visible = true;
+            off.domElement.toBlob((blob) => {
                 const link = document.createElement('a');
-                link.href = url;
-                link.download = filename;
+                link.href = URL.createObjectURL(blob);
+                link.download = `lorenz_export_${scale}x.png`;
                 link.click();
-                URL.revokeObjectURL(url);
-                offRenderer.dispose();
-                showMessage(`Exported: ${filename}`, 3000);
+                off.dispose();
             }, 'image/png');
         }
 
-        function showMessage(text, duration) {
-            const box = document.getElementById('message-box');
-            box.textContent = text;
-            box.style.display = 'block';
-            setTimeout(() => { box.style.display = 'none'; }, duration);
-        }
+        function showMessage(t, d) { const b = document.getElementById('message-box'); b.textContent = t; b.style.display = 'block'; setTimeout(() => b.style.display = 'none', d); }
 
-        // ─── Init ────────────────────────────────────────────────────────────────
         window.onload = () => {
             initThreeJS();
-
             document.getElementById('generateBtn').onclick = renderAttractor;
-
-            document.getElementById('toggleModeBtn').onclick = (e) => {
-                lineState = !lineState;
-                e.currentTarget.classList.toggle('active');
-                document.getElementById('toggleLabel').textContent = lineState ? 'Lines' : 'Points';
-                if (attractorObject) renderAttractor();
-            };
-
-            document.getElementById('toggleTwistBtn').onclick = (e) => {
-                twistMode = !twistMode;
-                e.currentTarget.classList.toggle('active');
-                if (attractorObject) renderAttractor();
-            };
-
-            document.getElementById('clearBtn').onclick = () => {
-                if (attractorObject) {
-                    scene.remove(attractorObject);
-                    attractorObject.geometry.dispose();
-                    attractorObject.material.dispose();
-                    attractorObject = null;
-                }
-            };
-
             document.getElementById('exportBtn').onclick = exportImage;
-
-            function animate() {
-                requestAnimationFrame(animate);
-                controls.update();
-                renderer.render(scene, camera);
-            }
+            document.getElementById('toggleModeBtn').onclick = (e) => { lineState = !lineState; e.currentTarget.classList.toggle('active'); document.getElementById('toggleLabel').textContent = lineState ? 'Lines' : 'Points'; if (attractorObject) renderAttractor(); };
+            document.getElementById('toggleTwistBtn').onclick = (e) => { twistMode = !twistMode; e.currentTarget.classList.toggle('active'); if (attractorObject) renderAttractor(); };
+            document.getElementById('clearBtn').onclick = () => { if (attractorObject) { scene.remove(attractorObject); attractorObject = null; } };
+            const animate = () => { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); };
             animate();
         };
     </script>
