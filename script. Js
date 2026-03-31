@@ -3,37 +3,57 @@ let lineState = true;
 let twistMode = false;
 
 // --- Math Engine ---
+// --- Math Engine (Updated for Dr. Muni's Draft) ---
 const generateLorenzPath = (a, b, c, iterations) => {
     let x = 0.1, y = 0.1, z = 0.1;
     const points = [];
     const colors = [];
+    
+    // Aesthetic Gradient Colors
     const colorStart = new THREE.Color(0x6366f1);
     const colorEnd = new THREE.Color(0x22d3ee);
-    const twistColorPos = new THREE.Color(0xff0055);
-    const twistColorNeg = new THREE.Color(0x0055ff);
+    
+    // Twist Mode Colors (Wong CVD-safe palette)
+    const twistColorPos = new THREE.Color(0xE69F00); // Gold
+    const twistColorNeg = new THREE.Color(0x0072B2); // Ocean Blue
 
-    for (let i = 0; i < iterations; i++) {
+    const burnIn = 1000; // Throw away the first 1000 iterations to settle onto the attractor
+    const epsilon = 0.005; // Noise gate: ignore torsion smaller than this
+
+    for (let i = 0; i < iterations + burnIn; i++) {
         let nextX = y;
         let nextY = Math.sin(z);
         let nextZ = a + (b * x) + (c * y) - Math.sin(z * z);
 
         x = nextX; y = nextY; z = nextZ;
-        const p = new THREE.Vector3(x * 25, y * 25, z * 25);
-        points.push(p);
 
-        if (twistMode && points.length > 3) {
-            // Discrete Torsion calculation for Dr. Muni
-            const v1 = new THREE.Vector3().subVectors(points[i], points[i-1]);
-            const v2 = new THREE.Vector3().subVectors(points[i-1], points[i-2]);
-            const v3 = new THREE.Vector3().subVectors(points[i-2], points[i-3]);
-            const torsion = new THREE.Vector3().crossVectors(v1, v2).dot(v3);
-            const twistFactor = Math.tanh(torsion * 50); 
-            const vColor = new THREE.Color().copy(twistColorNeg).lerp(twistColorPos, (twistFactor + 1) / 2);
-            colors.push(vColor.r, vColor.g, vColor.b);
-        } else {
-            const lerpFactor = i / iterations;
-            const vColor = new THREE.Color().copy(colorStart).lerp(colorEnd, lerpFactor);
-            colors.push(vColor.r, vColor.g, vColor.b);
+        // Only record and color points after the burn-in period
+        if (i >= burnIn) {
+            const p = new THREE.Vector3(x * 25, y * 25, z * 25);
+            points.push(p);
+
+            const idx = points.length - 1;
+
+            if (twistMode && points.length > 3) {
+                // Discrete Torsion calculation
+                const v1 = new THREE.Vector3().subVectors(points[idx], points[idx - 1]);
+                const v2 = new THREE.Vector3().subVectors(points[idx - 1], points[idx - 2]);
+                const v3 = new THREE.Vector3().subVectors(points[idx - 2], points[idx - 3]);
+                
+                let torsion = new THREE.Vector3().crossVectors(v1, v2).dot(v3);
+
+                // Noise Gate: Clean up the "Stable" ring tension
+                if (Math.abs(torsion) < epsilon) torsion = 0;
+
+                const twistFactor = Math.tanh(torsion * 15); 
+                const vColor = new THREE.Color().copy(twistColorNeg).lerp(twistColorPos, (twistFactor + 1) / 2);
+                colors.push(vColor.r, vColor.g, vColor.b);
+            } else {
+                // Default aesthetic gradient
+                const lerpFactor = (i - burnIn) / iterations;
+                const vColor = new THREE.Color().copy(colorStart).lerp(colorEnd, lerpFactor);
+                colors.push(vColor.r, vColor.g, vColor.b);
+            }
         }
     }
     return { points, colors };
