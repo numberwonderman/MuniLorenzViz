@@ -3,37 +3,98 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MuniLorenzViz</title>
+    <title>MuniLorenzViz | Sandbox Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
-<body>
-    <div id="message-box" class="message-box"></div>
+<body class="bg-slate-900 text-slate-100 font-sans overflow-hidden">
+    
+    <div id="message-box" class="fixed top-4 right-4 z-50 bg-indigo-600 text-white px-4 py-2 rounded-lg shadow-lg hidden"></div>
 
-    <div class="control-panel">
-        <h1 class="text-3xl font-bold text-center text-indigo-400 mb-2">Discrete MuniLorenzViz</h1>
-        <p class="text-center text-gray-400 mb-6 text-sm">Visualizing the 3D Sinusoidal Map.</p>
+    <div class="control-panel fixed top-0 left-0 h-full w-80 bg-slate-900/90 backdrop-blur-md border-r border-slate-700 p-6 overflow-y-auto z-40 transition-transform shadow-2xl">
+        <h1 class="text-2xl font-bold text-indigo-400 mb-1">MuniLorenzViz</h1>
+        <p class="text-xs text-slate-400 mb-6 uppercase tracking-widest font-semibold">Free Mathematica Sandbox</p>
 
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div class="space-y-4 mb-6">
+            <h3 class="text-xs font-bold text-indigo-300 uppercase underline decoration-indigo-500/30">Vector Field Equations</h3>
             <div class="flex flex-col">
-                <label class="text-gray-400 text-xs font-bold mb-1">Parameter a:</label>
-                <input type="number" id="paramA" value="0.015" step="0.001">
+                <label class="text-slate-500 text-[10px] font-bold mb-1 ml-1">NEXT X (dx/dt)</label>
+                <input type="text" id="formulaX" value="y" class="bg-slate-800 border border-slate-600 text-indigo-300 px-3 py-2 rounded-lg font-mono text-sm focus:border-indigo-500 outline-none transition-all">
             </div>
             <div class="flex flex-col">
-                <label class="text-gray-400 text-xs font-bold mb-1">Parameter b:</label>
-                <input type="number" id="paramB" value="0.79" step="0.01">
+                <label class="text-slate-500 text-[10px] font-bold mb-1 ml-1">NEXT Y (dy/dt)</label>
+                <input type="text" id="formulaY" value="Math.sin(z)" class="bg-slate-800 border border-slate-600 text-indigo-300 px-3 py-2 rounded-lg font-mono text-sm focus:border-indigo-500 outline-none transition-all">
             </div>
             <div class="flex flex-col">
-                <label class="text-gray-400 text-xs font-bold mb-1">Parameter c:</label>
-                <input type="number" id="paramC" value="0.9" step="0.01">
-            </div>
-            <div class="flex flex-col">
-                <label class="text-gray-400 text-xs font-bold mb-1">Iterations:</label>
-                <input type="number" id="iterCount" value="20000" step="1000">
+                <label class="text-slate-500 text-[10px] font-bold mb-1 ml-1">NEXT Z (dz/dt)</label>
+                <input type="text" id="formulaZ" value="a + (b * x) + (c * y) - Math.sin(z * z)" class="bg-slate-800 border border-slate-600 text-indigo-300 px-3 py-2 rounded-lg font-mono text-sm focus:border-indigo-500 outline-none transition-all">
             </div>
         </div>
 
+        <hr class="border-slate-700 mb-6">
+
+        <div class="grid grid-cols-2 gap-3 mb-6">
+            <div class="flex flex-col">
+                <label class="text-slate-500 text-[10px] font-bold mb-1">PARAM A</label>
+                <input type="number" id="paramA" value="0.015" step="0.001" class="bg-slate-800 border border-slate-700 text-white px-2 py-1.5 rounded-md text-sm">
+            </div>
+            <div class="flex flex-col">
+                <label class="text-slate-500 text-[10px] font-bold mb-1">PARAM B</label>
+                <input type="number" id="paramB" value="0.79" step="0.01" class="bg-slate-800 border border-slate-700 text-white px-2 py-1.5 rounded-md text-sm">
+            </div>
+            <div class="flex flex-col">
+                <label class="text-slate-500 text-[10px] font-bold mb-1">PARAM C</label>
+                <input type="number" id="paramC" value="0.9" step="0.01" class="bg-slate-800 border border-slate-700 text-white px-2 py-1.5 rounded-md text-sm">
+            </div>
+            <div class="flex flex-col">
+                <label class="text-slate-500 text-[10px] font-bold mb-1">ITERS (x1000)</label>
+                <input type="number" id="iterCount" value="20000" step="5000" class="bg-slate-800 border border-slate-700 text-white px-2 py-1.5 rounded-md text-sm">
+            </div>
+        </div>
+
+        <div class="space-y-3">
+            <button id="generateBtn" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-3 rounded-xl font-bold transition-all shadow-lg shadow-indigo-900/20 active:scale-95">Generate Manifold</button>
+            
+            <div class="flex gap-2">
+                <button id="toggleModeBtn" class="flex-1 bg-slate-800 border border-slate-700 text-xs py-2 rounded-lg hover:bg-slate-700 transition-colors">
+                    Mode: <span id="toggleLabel" class="text-indigo-400">Lines</span>
+                </button>
+                <button id="toggleTwistBtn" class="flex-1 bg-slate-800 border border-slate-700 text-xs py-2 rounded-lg hover:bg-slate-700 transition-colors">
+                    <span class="text-indigo-400">Twist Mode</span>
+                </button>
+            </div>
+            
+            <button id="clearBtn" class="w-full text-slate-500 hover:text-red-400 text-xs font-bold transition-colors">RESET WORKSPACE</button>
+        </div>
+
+        <div class="mt-8 pt-6 border-t border-slate-700 space-y-4">
+            <h3 class="text-xs font-bold text-emerald-400 uppercase">Journal Export</h3>
+            <div class="grid grid-cols-2 gap-2">
+                <select id="exportScale" class="bg-slate-800 border border-slate-700 text-white px-2 py-1.5 rounded text-[10px]">
+                    <option value="2">2× SCREEN</option>
+                    <option value="4" selected>4× JOURNAL</option>
+                    <option value="8">8× PRINT</option>
+                </select>
+                <select id="exportBg" class="bg-slate-800 border border-slate-700 text-white px-2 py-1.5 rounded text-[10px]">
+                    <option value="#000000" selected>BLACK</option>
+                    <option value="#ffffff">WHITE</option>
+                </select>
+            </div>
+            <button id="exportBtn" class="w-full bg-emerald-700/20 hover:bg-emerald-700/40 text-emerald-400 border border-emerald-700/50 py-2 rounded-lg text-xs font-bold transition-all">
+                DOWNLOAD HIGH-RES PNG
+            </button>
+        </div>
+    </div>
+
+    <canvas id="lorenzCanvas" class="w-full h-screen cursor-move"></canvas>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <script type="module" src="script.js"></script>
+</body>
+</html>
         <div class="flex gap-4 items-center flex-wrap">
             <button id="generateBtn" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white py-3 rounded-lg font-bold transition-all">Generate Attractor</button>
             <button id="toggleModeBtn" class="toggle-btn">
