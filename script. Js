@@ -1,39 +1,111 @@
+/**
+ * script.js - The Visual Engine for MuniLorenzViz
+ * Acts as the 'Director'—handling rendering, cameras, and UI.
+ * Imports mathematical data from sandbox.js.
+ */
+
+import { generateLorenzPath } from './sandbox.js';
+
 let scene, camera, renderer, controls, attractorObject;
 let lineState = true;
 let twistMode = false;
 
-// --- Math Engine ---
-// --- Math Engine (Updated for Dr. Muni's Draft) ---
-const generateLorenzPath = (a, b, c, iterations) => {
-    let x = 0.1, y = 0.1, z = 0.1;
-    const points = [];
-    const colors = [];
+function initThreeJS() {
+    const canvas = document.getElementById('lorenzCanvas');
+    if (!canvas) return;
+
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
+    camera.position.set(30, 30, 30);
+
+    renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+    renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
     
-    // Aesthetic Gradient Colors
-    const colorStart = new THREE.Color(0x6366f1);
-    const colorEnd = new THREE.Color(0x22d3ee);
-    
-    // Twist Mode Colors (Wong CVD-safe palette)
-    const twistColorPos = new THREE.Color(0xE69F00); // Gold
-    const twistColorNeg = new THREE.Color(0x0072B2); // Ocean Blue
+    // Add a simple grid or axes for spatial reference
+    const axesHelper = new THREE.AxesHelper(5);
+    scene.add(axesHelper);
+}
 
-    const burnIn = 1000; // Throw away the first 1000 iterations to settle onto the attractor
-    const epsilon = 0.005; // Noise gate: ignore torsion smaller than this
+function buildAttractorObject(points, colors) {
+    const geometry = new THREE.BufferGeometry().setFromPoints(points);
+    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
 
-    for (let i = 0; i < iterations + burnIn; i++) {
-        let nextX = y;
-        let nextY = Math.sin(z);
-        let nextZ = a + (b * x) + (c * y) - Math.sin(z * z);
+    const materialParams = { 
+        vertexColors: true, 
+        transparent: true, 
+        opacity: 0.8 
+    };
 
-        x = nextX; y = nextY; z = nextZ;
+    if (lineState) {
+        return new THREE.Line(geometry, new THREE.LineBasicMaterial(materialParams));
+    } else {
+        return new THREE.Points(geometry, new THREE.PointsMaterial({ ...materialParams, size: 0.15 }));
+    }
+}
 
-        // Only record and color points after the burn-in period
-        if (i >= burnIn) {
-            const p = new THREE.Vector3(x * 25, y * 25, z * 25);
-            points.push(p);
+function renderAttractor() {
+    // 1. Get UI Values
+    const a = parseFloat(document.getElementById('paramA').value) || 0;
+    const b = parseFloat(document.getElementById('paramB').value) || 0;
+    const c = parseFloat(document.getElementById('paramC').value) || 0;
+    const iters = parseInt(document.getElementById('iterCount').value) || 5000;
 
-            const idx = points.length - 1;
+    // 2. Clear Old Object
+    if (attractorObject) {
+        scene.remove(attractorObject);
+        attractorObject.geometry.dispose();
+        attractorObject.material.dispose();
+    }
 
+    // 3. Get Data from Sandbox
+    const data = generateLorenzPath(a, b, c, iters, twistMode);
+
+    // 4. Convert Raw Sandbox Points to Three.js Vectors (Scaling by 25)
+    const threePoints = data.points.map(p => new THREE.Vector3(p.x * 25, p.y * 25, p.z * 25));
+
+    // 5. Build and Add to Scene
+    attractorObject = buildAttractorObject(threePoints, data.colors);
+    scene.add(attractorObject);
+}
+
+// Initialization and Listeners
+window.onload = () => {
+    initThreeJS();
+
+    // UI Wire-up
+    const genBtn = document.getElementById('generateBtn');
+    if (genBtn) genBtn.onclick = renderAttractor;
+
+    const twistBtn = document.getElementById('toggleTwistBtn');
+    if (twistBtn) {
+        twistBtn.onclick = () => {
+            twistMode = !twistMode;
+            twistBtn.classList.toggle('active');
+            renderAttractor();
+        };
+    }
+
+    const toggleBtn = document.getElementById('toggleModeBtn');
+    if (toggleBtn) {
+        toggleBtn.onclick = () => {
+            lineState = !lineState;
+            const label = document.getElementById('toggleLabel');
+            if (label) label.textContent = lineState ? 'Lines' : 'Points';
+            renderAttractor();
+        };
+    }
+
+    function animate() {
+        requestAnimationFrame(animate);
+        if (controls) controls.update();
+        if (renderer && scene && camera) renderer.render(scene, camera);
+    }
+    animate();
+};
             if (twistMode && points.length > 3) {
                 // Discrete Torsion calculation
                 const v1 = new THREE.Vector3().subVectors(points[idx], points[idx - 1]);
