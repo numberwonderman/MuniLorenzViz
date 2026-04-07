@@ -6,13 +6,18 @@
     <title>MuniLorenzViz | Sandbox Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <style>
+        body { margin: 0; background: #0f172a; overflow: hidden; font-family: 'Inter', sans-serif; }
+        canvas { display: block; width: 100vw; height: 100vh; }
+        .control-panel::-webkit-scrollbar { width: 4px; }
+        .control-panel::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+    </style>
 </head>
-<body class="bg-slate-900 text-slate-100 font-sans overflow-hidden">
+<body class="bg-slate-900 text-slate-100 font-sans">
     
     <div id="message-box" class="fixed top-4 right-4 z-50 bg-indigo-600 text-white px-4 py-2 rounded-lg shadow-lg hidden"></div>
 
-    <div class="control-panel fixed top-0 left-0 h-full w-80 bg-slate-900/90 backdrop-blur-md border-r border-slate-700 p-6 overflow-y-auto z-40 transition-transform shadow-2xl">
+    <div class="control-panel fixed top-0 left-0 h-full w-80 bg-slate-900/90 backdrop-blur-md border-r border-slate-700 p-6 overflow-y-auto z-40 shadow-2xl">
         <h1 class="text-2xl font-bold text-indigo-400 mb-1">MuniLorenzViz</h1>
         <p class="text-xs text-slate-400 mb-6 uppercase tracking-widest font-semibold">Free Mathematica Sandbox</p>
 
@@ -20,19 +25,37 @@
             <h3 class="text-xs font-bold text-indigo-300 uppercase underline decoration-indigo-500/30">Vector Field Equations</h3>
             <div class="flex flex-col">
                 <label class="text-slate-500 text-[10px] font-bold mb-1 ml-1">NEXT X (dx/dt)</label>
-                <input type="text" id="formulaX" value="y" class="bg-slate-800 border border-slate-600 text-indigo-300 px-3 py-2 rounded-lg font-mono text-sm focus:border-indigo-500 outline-none transition-all">
+                <input type="text" id="formulaX" value="y" class="bg-slate-800 border border-slate-600 text-indigo-300 px-3 py-2 rounded-lg font-mono text-sm focus:border-indigo-500 outline-none">
             </div>
             <div class="flex flex-col">
                 <label class="text-slate-500 text-[10px] font-bold mb-1 ml-1">NEXT Y (dy/dt)</label>
-                <input type="text" id="formulaY" value="Math.sin(z)" class="bg-slate-800 border border-slate-600 text-indigo-300 px-3 py-2 rounded-lg font-mono text-sm focus:border-indigo-500 outline-none transition-all">
+                <input type="text" id="formulaY" value="Math.sin(z)" class="bg-slate-800 border border-slate-600 text-indigo-300 px-3 py-2 rounded-lg font-mono text-sm focus:border-indigo-500 outline-none">
             </div>
             <div class="flex flex-col">
                 <label class="text-slate-500 text-[10px] font-bold mb-1 ml-1">NEXT Z (dz/dt)</label>
-                <input type="text" id="formulaZ" value="a + (b * x) + (c * y) - Math.sin(z * z)" class="bg-slate-800 border border-slate-600 text-indigo-300 px-3 py-2 rounded-lg font-mono text-sm focus:border-indigo-500 outline-none transition-all">
+                <input type="text" id="formulaZ" value="a + (b * x) + (c * y) - Math.sin(z * z)" class="bg-slate-800 border border-slate-600 text-indigo-300 px-3 py-2 rounded-lg font-mono text-sm focus:border-indigo-500 outline-none">
             </div>
         </div>
 
         <hr class="border-slate-700 mb-6">
+
+        <div class="space-y-3 mb-6">
+            <h3 class="text-xs font-bold text-indigo-300 uppercase underline decoration-indigo-500/30">Initial State (Seed)</h3>
+            <div class="grid grid-cols-3 gap-2">
+                <div class="flex flex-col">
+                    <label class="text-slate-500 text-[10px] font-bold mb-1 ml-1">X0</label>
+                    <input type="number" id="startX" value="0.1" step="0.1" class="bg-slate-800 border border-slate-700 text-white px-2 py-1.5 rounded-md text-xs">
+                </div>
+                <div class="flex flex-col">
+                    <label class="text-slate-500 text-[10px] font-bold mb-1 ml-1">Y0</label>
+                    <input type="number" id="startY" value="0.2" step="0.1" class="bg-slate-800 border border-slate-700 text-white px-2 py-1.5 rounded-md text-xs">
+                </div>
+                <div class="flex flex-col">
+                    <label class="text-slate-500 text-[10px] font-bold mb-1 ml-1">Z0</label>
+                    <input type="number" id="startZ" value="0.3" step="0.1" class="bg-slate-800 border border-slate-700 text-white px-2 py-1.5 rounded-md text-xs">
+                </div>
+            </div>
+        </div>
 
         <div class="grid grid-cols-2 gap-3 mb-6">
             <div class="flex flex-col">
@@ -54,18 +77,16 @@
         </div>
 
         <div class="space-y-3">
-            <button id="generateBtn" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-3 rounded-xl font-bold transition-all shadow-lg shadow-indigo-900/20 active:scale-95">Generate Manifold</button>
-            
+            <button id="generateBtn" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-3 rounded-xl font-bold transition-all active:scale-95">Generate Manifold</button>
             <div class="flex gap-2">
-                <button id="toggleModeBtn" class="flex-1 bg-slate-800 border border-slate-700 text-xs py-2 rounded-lg hover:bg-slate-700 transition-colors">
+                <button id="toggleModeBtn" class="flex-1 bg-slate-800 border border-slate-700 text-[10px] py-2 rounded-lg hover:bg-slate-700 transition-colors">
                     Mode: <span id="toggleLabel" class="text-indigo-400">Lines</span>
                 </button>
-                <button id="toggleTwistBtn" class="flex-1 bg-slate-800 border border-slate-700 text-xs py-2 rounded-lg hover:bg-slate-700 transition-colors">
-                    <span class="text-indigo-400">Twist Mode</span>
+                <button id="toggleTwistBtn" class="flex-1 bg-slate-800 border border-slate-700 text-[10px] py-2 rounded-lg hover:bg-slate-700 transition-colors">
+                    <span id="twistLabel" class="text-indigo-400">Twist Mode</span>
                 </button>
             </div>
-            
-            <button id="clearBtn" class="w-full text-slate-500 hover:text-red-400 text-xs font-bold transition-colors">RESET WORKSPACE</button>
+            <button id="clearBtn" class="w-full text-slate-500 hover:text-red-400 text-[10px] font-bold transition-colors">RESET WORKSPACE</button>
         </div>
 
         <div class="mt-8 pt-6 border-t border-slate-700 space-y-4">
@@ -87,50 +108,6 @@
         </div>
     </div>
 
-    <canvas id="lorenzCanvas" class="w-full h-screen cursor-move"></canvas>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-
-    <script type="module" src="script.js"></script>
-</body>
-</html>
-        <div class="flex gap-4 items-center flex-wrap">
-            <button id="generateBtn" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white py-3 rounded-lg font-bold transition-all">Generate Attractor</button>
-            <button id="toggleModeBtn" class="toggle-btn">
-                <span class="toggle-indicator"></span>
-                <span id="toggleLabel">Lines</span>
-            </button>
-            <button id="toggleTwistBtn" class="toggle-btn" title="Color by Twist (Torsion)">
-                <span class="toggle-indicator"></span>
-                <span>Twist Mode</span>
-            </button>
-            <button id="clearBtn" class="px-6 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-bold transition-all">Clear</button>
-        </div>
-
-        <div class="flex gap-4 items-end flex-wrap mt-4 pt-4 border-t border-slate-600">
-            <div class="flex flex-col">
-                <label class="text-gray-400 text-xs font-bold mb-1">Export Resolution:</label>
-                <select id="exportScale" class="bg-slate-700 border border-slate-500 text-white px-3 py-2 rounded-lg text-sm">
-                    <option value="2">2× — Screen</option>
-                    <option value="4" selected>4× — Journal</option>
-                    <option value="6">6× — Print</option>
-                </select>
-            </div>
-            <div class="flex flex-col">
-                <label class="text-gray-400 text-xs font-bold mb-1">Background:</label>
-                <select id="exportBg" class="bg-slate-700 border border-slate-500 text-white px-3 py-2 rounded-lg text-sm">
-                    <option value="#000000" selected>Black</option>
-                    <option value="#ffffff">White</option>
-                    <option value="transparent">Transparent</option>
-                </select>
-            </div>
-            <button id="exportBtn" class="flex-1 bg-emerald-700 hover:bg-emerald-600 text-white py-2 px-6 rounded-lg font-bold transition-all flex items-center justify-center gap-2">
-                Export Image
-            </button>
-        </div>
-    </div>
-
     <canvas id="lorenzCanvas"></canvas>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -141,34 +118,58 @@
         let lineState = true, twistMode = false;
 
         const generateLorenzPath = (a, b, c, iterations) => {
-            let x = 0.1, y = 0.1, z = 0.1;
+            // 1. Pull dynamic starts from UI
+            let x = parseFloat(document.getElementById('startX').value) || 0.1;
+            let y = parseFloat(document.getElementById('startY').value) || 0.2;
+            let z = parseFloat(document.getElementById('startZ').value) || 0.3;
+
+            // 2. Pull formulas from UI
+            const formulaX = document.getElementById('formulaX').value;
+            const formulaY = document.getElementById('formulaY').value;
+            const formulaZ = document.getElementById('formulaZ').value;
+
+            // 3. Construct functions
+            let getNextX, getNextY, getNextZ;
+            try {
+                getNextX = new Function('x', 'y', 'z', 'a', 'b', 'c', `return ${formulaX};`);
+                getNextY = new Function('x', 'y', 'z', 'a', 'b', 'c', `return ${formulaY};`);
+                getNextZ = new Function('x', 'y', 'z', 'a', 'b', 'c', `return ${formulaZ};`);
+            } catch (err) {
+                console.error("Syntax in formula box:", err);
+                return { points: [], colors: [] };
+            }
+
             const points = [], colors = [];
             const colorStart = new THREE.Color(0x6366f1), colorEnd = new THREE.Color(0x22d3ee);
             const twistColorPos = new THREE.Color(0xe69f00), twistColorNeg = new THREE.Color(0x0072b2);
 
             for (let i = 0; i < iterations; i++) {
-                let nextX = y;
-                let nextY = Math.sin(z);
-                let nextZ = a + (b * x) + (c * y) - Math.sin(z * z);
-                x = nextX; y = nextY; z = nextZ;
-                points.push(new THREE.Vector3(x * 25, y * 25, z * 25));
+                try {
+                    let nextX = getNextX(x, y, z, a, b, c);
+                    let nextY = getNextY(x, y, z, a, b, c);
+                    let nextZ = getNextZ(x, y, z, a, b, c);
+                    x = nextX; y = nextY; z = nextZ;
 
-                if (twistMode && points.length > 3) {
-                    const v1 = new THREE.Vector3().subVectors(points[i], points[i-1]);
-                    const v2 = new THREE.Vector3().subVectors(points[i-1], points[i-2]);
-                    const v3 = new THREE.Vector3().subVectors(points[i-2], points[i-3]);
-                    const torsion = new THREE.Vector3().crossVectors(v1, v2).dot(v3);
-                    const vColor = new THREE.Color().copy(twistColorNeg).lerp(twistColorPos, (Math.tanh(torsion * 50) + 1) / 2);
-                    colors.push(vColor.r, vColor.g, vColor.b);
-                } else {
-                    const vColor = new THREE.Color().copy(colorStart).lerp(colorEnd, i / iterations);
-                    colors.push(vColor.r, vColor.g, vColor.b);
-                }
+                    points.push(new THREE.Vector3(x * 25, y * 25, z * 25));
+
+                    if (twistMode && i > 3) {
+                        const v1 = new THREE.Vector3().subVectors(points[i], points[i-1]);
+                        const v2 = new THREE.Vector3().subVectors(points[i-1], points[i-2]);
+                        const v3 = new THREE.Vector3().subVectors(points[i-2], points[i-3]);
+                        const torsion = new THREE.Vector3().crossVectors(v1, v2).dot(v3);
+                        const vColor = new THREE.Color().copy(twistColorNeg).lerp(twistColorPos, (Math.tanh(torsion * 50) + 1) / 2);
+                        colors.push(vColor.r, vColor.g, vColor.b);
+                    } else {
+                        const vColor = new THREE.Color().copy(colorStart).lerp(colorEnd, i / iterations);
+                        colors.push(vColor.r, vColor.g, vColor.b);
+                    }
+                } catch(e) { break; }
             }
             return { points, colors };
         };
 
         function buildAttractorObject(data) {
+            if (data.points.length === 0) return null;
             const geometry = new THREE.BufferGeometry().setFromPoints(data.points);
             geometry.setAttribute('color', new THREE.Float32BufferAttribute(data.colors, 3));
             const mat = { vertexColors: true, transparent: true, opacity: 0.8 };
@@ -178,51 +179,46 @@
         function initThreeJS() {
             const canvas = document.getElementById('lorenzCanvas');
             scene = new THREE.Scene();
-            camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
-            camera.position.set(30, 30, 30);
+            camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 2000);
+            camera.position.set(50, 50, 50);
             renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
             renderer.setSize(canvas.clientWidth, canvas.clientHeight);
             controls = new THREE.OrbitControls(camera, renderer.domElement);
-            axesHelper = new THREE.AxesHelper(5);
+            axesHelper = new THREE.AxesHelper(10);
             scene.add(axesHelper);
         }
 
         function renderAttractor() {
-            const a = parseFloat(document.getElementById('paramA').value), b = parseFloat(document.getElementById('paramB').value), c = parseFloat(document.getElementById('paramC').value), iters = parseInt(document.getElementById('iterCount').value);
-            if (attractorObject) { scene.remove(attractorObject); attractorObject.geometry.dispose(); attractorObject.material.dispose(); }
+            const a = parseFloat(document.getElementById('paramA').value);
+            const b = parseFloat(document.getElementById('paramB').value);
+            const c = parseFloat(document.getElementById('paramC').value);
+            const iters = parseInt(document.getElementById('iterCount').value);
+            
+            if (attractorObject) { 
+                scene.remove(attractorObject); 
+                attractorObject.geometry.dispose(); 
+                attractorObject.material.dispose(); 
+            }
+            
             const data = generateLorenzPath(a, b, c, iters);
             attractorObject = buildAttractorObject(data);
-            scene.add(attractorObject);
+            if (attractorObject) scene.add(attractorObject);
         }
-
-        function exportImage() {
-            if (!attractorObject) return showMessage('Generate an attractor first.', 2000);
-            const scale = parseInt(document.getElementById('exportScale').value), bg = document.getElementById('exportBg').value;
-            const canvas = document.getElementById('lorenzCanvas'), w = canvas.clientWidth * scale, h = canvas.clientHeight * scale;
-            const off = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true, alpha: bg === 'transparent' });
-            off.setSize(w, h);
-            if (bg !== 'transparent') off.setClearColor(new THREE.Color(bg), 1);
-            axesHelper.visible = false;
-            off.render(scene, camera);
-            axesHelper.visible = true;
-            off.domElement.toBlob((blob) => {
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(blob);
-                link.download = `lorenz_export_${scale}x.png`;
-                link.click();
-                off.dispose();
-            }, 'image/png');
-        }
-
-        function showMessage(t, d) { const b = document.getElementById('message-box'); b.textContent = t; b.style.display = 'block'; setTimeout(() => b.style.display = 'none', d); }
 
         window.onload = () => {
             initThreeJS();
             document.getElementById('generateBtn').onclick = renderAttractor;
-            document.getElementById('exportBtn').onclick = exportImage;
-            document.getElementById('toggleModeBtn').onclick = (e) => { lineState = !lineState; e.currentTarget.classList.toggle('active'); document.getElementById('toggleLabel').textContent = lineState ? 'Lines' : 'Points'; if (attractorObject) renderAttractor(); };
-            document.getElementById('toggleTwistBtn').onclick = (e) => { twistMode = !twistMode; e.currentTarget.classList.toggle('active'); if (attractorObject) renderAttractor(); };
-            document.getElementById('clearBtn').onclick = () => { if (attractorObject) { scene.remove(attractorObject); attractorObject = null; } };
+            document.getElementById('toggleModeBtn').onclick = () => { 
+                lineState = !lineState; 
+                document.getElementById('toggleLabel').textContent = lineState ? 'Lines' : 'Points'; 
+                if (attractorObject) renderAttractor(); 
+            };
+            document.getElementById('toggleTwistBtn').onclick = (e) => { 
+                twistMode = !twistMode; 
+                e.currentTarget.classList.toggle('bg-indigo-900');
+                if (attractorObject) renderAttractor(); 
+            };
+            document.getElementById('clearBtn').onclick = () => { if (attractorObject) scene.remove(attractorObject); attractorObject = null; };
             const animate = () => { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); };
             animate();
         };

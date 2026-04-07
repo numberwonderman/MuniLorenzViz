@@ -1,7 +1,5 @@
 /**
- * script.js - The Visual Engine for MuniLorenzViz
- * Acts as the 'Director'—handling rendering, cameras, and UI.
- * Imports mathematical data from sandbox.js.
+ * script.js - Optimized for Boyer 109 Presentation
  */
 
 import { generateLorenzPath } from './sandbox.js';
@@ -9,6 +7,11 @@ import { generateLorenzPath } from './sandbox.js';
 let scene, camera, renderer, controls, attractorObject;
 let lineState = true;
 let twistMode = false;
+
+// Configuration for Torsion Colors (Matches your blue/orange "Intergalactic" aesthetic)
+const twistColorNeg = new THREE.Color(0x0077ff); // Deep Blue
+const twistColorPos = new THREE.Color(0xff7700); // Bright Orange
+const epsilon = 1e-9;
 
 function initThreeJS() {
     const canvas = document.getElementById('lorenzCanvas');
@@ -20,19 +23,20 @@ function initThreeJS() {
 
     renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
     renderer.setSize(canvas.clientWidth, canvas.clientHeight);
-    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Cap pixel ratio for performance
 
     controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     
-    // Add a simple grid or axes for spatial reference
-    const axesHelper = new THREE.AxesHelper(5);
-    scene.add(axesHelper);
+    scene.add(new THREE.AxesHelper(5));
 }
 
-function buildAttractorObject(points, colors) {
-    const geometry = new THREE.BufferGeometry().setFromPoints(points);
-    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+function buildAttractorObject(data) {
+    // Scaling points by 25 for better visibility in the Three.js coordinate space
+    const threePoints = data.points.map(p => new THREE.Vector3(p.x * 25, p.y * 25, p.z * 25));
+    
+    const geometry = new THREE.BufferGeometry().setFromPoints(threePoints);
+    geometry.setAttribute('color', new THREE.Float32BufferAttribute(data.colors, 3));
 
     const materialParams = { 
         vertexColors: true, 
@@ -48,35 +52,28 @@ function buildAttractorObject(points, colors) {
 }
 
 function renderAttractor() {
-    // 1. Get UI Values
     const a = parseFloat(document.getElementById('paramA').value) || 0;
     const b = parseFloat(document.getElementById('paramB').value) || 0;
     const c = parseFloat(document.getElementById('paramC').value) || 0;
     const iters = parseInt(document.getElementById('iterCount').value) || 5000;
 
-    // 2. Clear Old Object
     if (attractorObject) {
         scene.remove(attractorObject);
         attractorObject.geometry.dispose();
         attractorObject.material.dispose();
     }
 
-    // 3. Get Data from Sandbox
+    // Call the sandbox generator
     const data = generateLorenzPath(a, b, c, iters, twistMode);
 
-    // 4. Convert Raw Sandbox Points to Three.js Vectors (Scaling by 25)
-    const threePoints = data.points.map(p => new THREE.Vector3(p.x * 25, p.y * 25, p.z * 25));
-
-    // 5. Build and Add to Scene
-    attractorObject = buildAttractorObject(threePoints, data.colors);
+    attractorObject = buildAttractorObject(data);
     scene.add(attractorObject);
 }
 
-// Initialization and Listeners
+// Ensure the DOM is fully loaded
 window.onload = () => {
     initThreeJS();
 
-    // UI Wire-up
     const genBtn = document.getElementById('generateBtn');
     if (genBtn) genBtn.onclick = renderAttractor;
 
@@ -96,121 +93,6 @@ window.onload = () => {
             const label = document.getElementById('toggleLabel');
             if (label) label.textContent = lineState ? 'Lines' : 'Points';
             renderAttractor();
-        };
-    }
-
-    function animate() {
-        requestAnimationFrame(animate);
-        if (controls) controls.update();
-        if (renderer && scene && camera) renderer.render(scene, camera);
-    }
-    animate();
-};
-            if (twistMode && points.length > 3) {
-                // Discrete Torsion calculation
-                const v1 = new THREE.Vector3().subVectors(points[idx], points[idx - 1]);
-                const v2 = new THREE.Vector3().subVectors(points[idx - 1], points[idx - 2]);
-                const v3 = new THREE.Vector3().subVectors(points[idx - 2], points[idx - 3]);
-                
-                let torsion = new THREE.Vector3().crossVectors(v1, v2).dot(v3);
-
-                // Noise Gate: Clean up the "Stable" ring tension
-                if (Math.abs(torsion) < epsilon) torsion = 0;
-
-                const twistFactor = Math.tanh(torsion * 15); 
-                const vColor = new THREE.Color().copy(twistColorNeg).lerp(twistColorPos, (twistFactor + 1) / 2);
-                colors.push(vColor.r, vColor.g, vColor.b);
-            } else {
-                // Default aesthetic gradient
-                const lerpFactor = (i - burnIn) / iterations;
-                const vColor = new THREE.Color().copy(colorStart).lerp(colorEnd, lerpFactor);
-                colors.push(vColor.r, vColor.g, vColor.b);
-            }
-        }
-    }
-    return { points, colors };
-};
-
-function buildAttractorObject(data) {
-    const geometry = new THREE.BufferGeometry().setFromPoints(data.points);
-    geometry.setAttribute('color', new THREE.Float32BufferAttribute(data.colors, 3));
-
-    if (lineState) {
-        return new THREE.Line(geometry, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.8 }));
-    } else {
-        return new THREE.Points(geometry, new THREE.PointsMaterial({ vertexColors: true, size: 0.15, transparent: true, opacity: 0.9 }));
-    }
-}
-
-function initThreeJS() {
-    console.log("Initializing Three.js...");
-    const canvas = document.getElementById('lorenzCanvas');
-    if (!canvas) { console.error("Canvas not found!"); return; }
-
-    scene = new THREE.Scene();
-    camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
-    camera.position.set(30, 30, 30);
-
-    renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
-    renderer.setSize(canvas.clientWidth, canvas.clientHeight);
-    renderer.setPixelRatio(window.devicePixelRatio);
-
-    controls = new THREE.OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    scene.add(new THREE.AxesHelper(5));
-}
-
-function renderAttractor() {
-    console.log("Generating Attractor...");
-    const a = parseFloat(document.getElementById('paramA').value);
-    const b = parseFloat(document.getElementById('paramB').value);
-    const c = parseFloat(document.getElementById('paramC').value);
-    const iters = parseInt(document.getElementById('iterCount').value);
-
-    if (attractorObject) {
-        scene.remove(attractorObject);
-        attractorObject.geometry.dispose();
-        attractorObject.material.dispose();
-    }
-
-    const data = generateLorenzPath(a, b, c, iters);
-    attractorObject = buildAttractorObject(data);
-    scene.add(attractorObject);
-}
-
-// Ensure the DOM is fully loaded before attaching listeners
-window.onload = () => {
-    initThreeJS();
-
-    const genBtn = document.getElementById('generateBtn');
-    if (genBtn) genBtn.onclick = renderAttractor;
-
-    const toggleBtn = document.getElementById('toggleModeBtn');
-    if (toggleBtn) {
-        toggleBtn.onclick = (e) => {
-            lineState = !lineState;
-            toggleBtn.classList.toggle('active');
-            document.getElementById('toggleLabel').textContent = lineState ? 'Lines' : 'Points';
-            if (attractorObject) renderAttractor();
-        };
-    }
-
-    const twistBtn = document.getElementById('toggleTwistBtn');
-    if (twistBtn) {
-        twistBtn.onclick = () => {
-            twistMode = !twistMode;
-            twistBtn.classList.toggle('active');
-            if (attractorObject) renderAttractor();
-        };
-    }
-
-    const clearBtn = document.getElementById('clearBtn');
-    if (clearBtn) {
-        clearBtn.onclick = () => {
-            if (attractorObject) {
-                scene.remove(attractorObject);
-                attractorObject = null;
-            }
         };
     }
 
