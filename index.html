@@ -11,16 +11,62 @@
         canvas { display: block; width: 100vw; height: 100vh; }
         .control-panel::-webkit-scrollbar { width: 4px; }
         .control-panel::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+ 
+        /* Dropdown styling */
+        #attractorPreset {
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236366f1' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            padding-right: 28px;
+            cursor: pointer;
+        }
+        #attractorPreset option {
+            background: #1e293b;
+            color: #e2e8f0;
+        }
+        .preset-badge {
+            display: inline-block;
+            font-size: 9px;
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            vertical-align: middle;
+            margin-left: 4px;
+        }
+        .preset-badge.core { background: #312e81; color: #a5b4fc; }
+        .preset-badge.classic { background: #14532d; color: #86efac; }
     </style>
 </head>
 <body class="bg-slate-900 text-slate-100 font-sans">
     
     <div id="message-box" class="fixed top-4 right-4 z-50 bg-indigo-600 text-white px-4 py-2 rounded-lg shadow-lg hidden"></div>
-
+ 
     <div class="control-panel fixed top-0 left-0 h-full w-80 bg-slate-900/90 backdrop-blur-md border-r border-slate-700 p-6 overflow-y-auto z-40 shadow-2xl">
         <h1 class="text-2xl font-bold text-indigo-400 mb-1">MuniLorenzViz</h1>
         <p class="text-xs text-slate-400 mb-6 uppercase tracking-widest font-semibold">Free Mathematica Sandbox</p>
-
+ 
+        <!-- ATTRACTOR PRESET DROPDOWN -->
+        <div class="mb-6">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-xs font-bold text-indigo-300 uppercase underline decoration-indigo-500/30">Attractor Preset</h3>
+                <span id="presetBadge" class="preset-badge core">CORE</span>
+            </div>
+            <select id="attractorPreset" class="w-full bg-slate-800 border border-indigo-500/50 text-indigo-200 px-3 py-2 rounded-lg text-sm focus:border-indigo-400 outline-none transition-colors hover:border-indigo-400">
+                <option value="muni">🌀 Muni Sinusoidal (Core)</option>
+                <option value="lorenz">🦋 Lorenz (Classic)</option>
+                <option value="rossler">🌊 Rössler</option>
+                <option value="hadley">🌐 Hadley</option>
+                <option value="thomas">🔷 Thomas (Cyclic)</option>
+                <option value="custom">✏️ Custom (Edit Below)</option>
+            </select>
+            <p id="presetDesc" class="text-[10px] text-slate-500 mt-1.5 ml-1 italic">The core sinusoidal map from Muni (2025). The heart of the project.</p>
+        </div>
+ 
+        <hr class="border-slate-700 mb-6">
+ 
         <div class="space-y-4 mb-6">
             <h3 class="text-xs font-bold text-indigo-300 uppercase underline decoration-indigo-500/30">Vector Field Equations</h3>
             <div class="flex flex-col">
@@ -36,9 +82,9 @@
                 <input type="text" id="formulaZ" value="a + (b * x) + (c * y) - Math.sin(z * z)" class="bg-slate-800 border border-slate-600 text-indigo-300 px-3 py-2 rounded-lg font-mono text-sm focus:border-indigo-500 outline-none">
             </div>
         </div>
-
+ 
         <hr class="border-slate-700 mb-6">
-
+ 
         <div class="space-y-3 mb-6">
             <h3 class="text-xs font-bold text-indigo-300 uppercase underline decoration-indigo-500/30">Initial State (Seed)</h3>
             <div class="grid grid-cols-3 gap-2">
@@ -56,7 +102,7 @@
                 </div>
             </div>
         </div>
-
+ 
         <div class="grid grid-cols-2 gap-3 mb-6">
             <div class="flex flex-col">
                 <label class="text-slate-500 text-[10px] font-bold mb-1">PARAM A</label>
@@ -75,7 +121,7 @@
                 <input type="number" id="iterCount" value="20000" step="5000" class="bg-slate-800 border border-slate-700 text-white px-2 py-1.5 rounded-md text-sm">
             </div>
         </div>
-
+ 
         <div class="space-y-3">
             <button id="generateBtn" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-3 rounded-xl font-bold transition-all active:scale-95">Generate Manifold</button>
             <div class="flex gap-2">
@@ -88,7 +134,7 @@
             </div>
             <button id="clearBtn" class="w-full text-slate-500 hover:text-red-400 text-[10px] font-bold transition-colors">RESET WORKSPACE</button>
         </div>
-
+ 
         <div class="mt-8 pt-6 border-t border-slate-700 space-y-4">
             <h3 class="text-xs font-bold text-emerald-400 uppercase">Journal Export</h3>
             <div class="grid grid-cols-2 gap-2">
@@ -107,28 +153,126 @@
             </button>
         </div>
     </div>
-
+ 
     <canvas id="lorenzCanvas"></canvas>
-
+ 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-
+ 
     <script>
+        // ── PRESET DEFINITIONS ──────────────────────────────────────────────
+        const PRESETS = {
+            muni: {
+                label: "Muni Sinusoidal (Core)",
+                badge: "CORE",
+                badgeClass: "core",
+                desc: "The core sinusoidal map from Muni (2025). The heart of the project.",
+                fx: "y",
+                fy: "Math.sin(z)",
+                fz: "a + (b * x) + (c * y) - Math.sin(z * z)",
+                a: 0.015, b: 0.79, c: 0.9,
+                x0: 0.1, y0: 0.2, z0: 0.3,
+                iters: 20000
+            },
+            lorenz: {
+                label: "Lorenz",
+                badge: "CLASSIC",
+                badgeClass: "classic",
+                desc: "The butterfly attractor. σ=a, ρ=b, β=c. Uses dt=0.005 baked into formulas.",
+                fx: "x + 0.005 * (a * (y - x))",
+                fy: "y + 0.005 * (x * (b - z) - y)",
+                fz: "z + 0.005 * (x * y - c * z)",
+                a: 10, b: 28, c: 2.667,
+                x0: 0.1, y0: 0.0, z0: 0.0,
+                iters: 50000
+            },
+            rossler: {
+                label: "Rössler",
+                badge: "CLASSIC",
+                badgeClass: "classic",
+                desc: "Simple spiral chaos. a, b, c are Rössler parameters. dt=0.01 baked in.",
+                fx: "x + 0.01 * (-(y + z))",
+                fy: "y + 0.01 * (x + a * y)",
+                fz: "z + 0.01 * (b + z * (x - c))",
+                a: 0.2, b: 0.2, c: 5.7,
+                x0: 0.1, y0: 0.0, z0: 0.0,
+                iters: 50000
+            },
+            hadley: {
+                label: "Hadley",
+                badge: "CLASSIC",
+                badgeClass: "classic",
+                desc: "Atmospheric circulation model. dt=0.02 baked in.",
+                fx: "x + 0.02 * (-y*y - z*z - a*x + a*c)",
+                fy: "y + 0.02 * (x*y - b*x*z - y + b)",
+                fz: "z + 0.02 * (b*x*y + x*z - z)",
+                a: 0.2, b: 4.0, c: 8.0,
+                x0: 0.0, y0: 0.0, z0: 1.3,
+                iters: 50000
+            },
+            thomas: {
+                label: "Thomas (Cyclic)",
+                badge: "CLASSIC",
+                badgeClass: "classic",
+                desc: "Cyclically symmetric dissipative flow. b=damping parameter. dt=0.05 baked in.",
+                fx: "x + 0.05 * (Math.sin(y) - a * x)",
+                fy: "y + 0.05 * (Math.sin(z) - a * y)",
+                fz: "z + 0.05 * (Math.sin(x) - a * z)",
+                a: 0.19, b: 0.19, c: 0.19,
+                x0: 0.1, y0: 0.0, z0: 0.0,
+                iters: 50000
+            },
+            custom: {
+                label: "Custom",
+                badge: "CUSTOM",
+                badgeClass: "core",
+                desc: "Edit the equations and parameters freely below.",
+                fx: null, fy: null, fz: null,
+                a: null, b: null, c: null,
+                x0: null, y0: null, z0: null,
+                iters: null
+            }
+        };
+ 
+        // ── PRESET LOADER ────────────────────────────────────────────────────
+        function loadPreset(key) {
+            const p = PRESETS[key];
+            if (!p) return;
+ 
+            const badge = document.getElementById('presetBadge');
+            const desc  = document.getElementById('presetDesc');
+ 
+            badge.textContent = p.badge;
+            badge.className = `preset-badge ${p.badgeClass}`;
+            desc.textContent = p.desc;
+ 
+            if (key === 'custom') return; // leave fields as-is
+ 
+            document.getElementById('formulaX').value = p.fx;
+            document.getElementById('formulaY').value = p.fy;
+            document.getElementById('formulaZ').value = p.fz;
+            document.getElementById('paramA').value   = p.a;
+            document.getElementById('paramB').value   = p.b;
+            document.getElementById('paramC').value   = p.c;
+            document.getElementById('startX').value   = p.x0;
+            document.getElementById('startY').value   = p.y0;
+            document.getElementById('startZ').value   = p.z0;
+            document.getElementById('iterCount').value = p.iters;
+        }
+ 
+        // ── THREE.JS STATE ───────────────────────────────────────────────────
         let scene, camera, renderer, controls, attractorObject, axesHelper;
         let lineState = true, twistMode = false;
-
+ 
         const generateLorenzPath = (a, b, c, iterations) => {
-            // 1. Pull dynamic starts from UI
             let x = parseFloat(document.getElementById('startX').value) || 0.1;
             let y = parseFloat(document.getElementById('startY').value) || 0.2;
             let z = parseFloat(document.getElementById('startZ').value) || 0.3;
-
-            // 2. Pull formulas from UI
+ 
             const formulaX = document.getElementById('formulaX').value;
             const formulaY = document.getElementById('formulaY').value;
             const formulaZ = document.getElementById('formulaZ').value;
-
-            // 3. Construct functions
+ 
             let getNextX, getNextY, getNextZ;
             try {
                 getNextX = new Function('x', 'y', 'z', 'a', 'b', 'c', `return ${formulaX};`);
@@ -138,26 +282,28 @@
                 console.error("Syntax in formula box:", err);
                 return { points: [], colors: [] };
             }
-
+ 
             const points = [], colors = [];
-            const colorStart = new THREE.Color(0x6366f1), colorEnd = new THREE.Color(0x22d3ee);
-            const twistColorPos = new THREE.Color(0xe69f00), twistColorNeg = new THREE.Color(0x0072b2);
-
+            const colorStart   = new THREE.Color(0x6366f1);
+            const colorEnd     = new THREE.Color(0x22d3ee);
+            const twistColorPos = new THREE.Color(0xe69f00);
+            const twistColorNeg = new THREE.Color(0x0072b2);
+ 
             for (let i = 0; i < iterations; i++) {
                 try {
                     let nextX = getNextX(x, y, z, a, b, c);
                     let nextY = getNextY(x, y, z, a, b, c);
                     let nextZ = getNextZ(x, y, z, a, b, c);
                     x = nextX; y = nextY; z = nextZ;
-
+ 
                     points.push(new THREE.Vector3(x * 25, y * 25, z * 25));
-
+ 
                     if (twistMode && i > 3) {
-                        const v1 = new THREE.Vector3().subVectors(points[i], points[i-1]);
+                        const v1 = new THREE.Vector3().subVectors(points[i],   points[i-1]);
                         const v2 = new THREE.Vector3().subVectors(points[i-1], points[i-2]);
                         const v3 = new THREE.Vector3().subVectors(points[i-2], points[i-3]);
                         const torsion = new THREE.Vector3().crossVectors(v1, v2).dot(v3);
-                        const vColor = new THREE.Color().copy(twistColorNeg).lerp(twistColorPos, (Math.tanh(torsion * 50) + 1) / 2);
+                        const vColor  = new THREE.Color().copy(twistColorNeg).lerp(twistColorPos, (Math.tanh(torsion * 50) + 1) / 2);
                         colors.push(vColor.r, vColor.g, vColor.b);
                     } else {
                         const vColor = new THREE.Color().copy(colorStart).lerp(colorEnd, i / iterations);
@@ -167,19 +313,21 @@
             }
             return { points, colors };
         };
-
+ 
         function buildAttractorObject(data) {
             if (data.points.length === 0) return null;
             const geometry = new THREE.BufferGeometry().setFromPoints(data.points);
             geometry.setAttribute('color', new THREE.Float32BufferAttribute(data.colors, 3));
             const mat = { vertexColors: true, transparent: true, opacity: 0.8 };
-            return lineState ? new THREE.Line(geometry, new THREE.LineBasicMaterial(mat)) : new THREE.Points(geometry, new THREE.PointsMaterial({...mat, size: 0.15}));
+            return lineState
+                ? new THREE.Line(geometry, new THREE.LineBasicMaterial(mat))
+                : new THREE.Points(geometry, new THREE.PointsMaterial({...mat, size: 0.15}));
         }
-
+ 
         function initThreeJS() {
             const canvas = document.getElementById('lorenzCanvas');
-            scene = new THREE.Scene();
-            camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 2000);
+            scene    = new THREE.Scene();
+            camera   = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 2000);
             camera.position.set(50, 50, 50);
             renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
             renderer.setSize(canvas.clientWidth, canvas.clientHeight);
@@ -187,41 +335,90 @@
             axesHelper = new THREE.AxesHelper(10);
             scene.add(axesHelper);
         }
-
+ 
         function renderAttractor() {
-            const a = parseFloat(document.getElementById('paramA').value);
-            const b = parseFloat(document.getElementById('paramB').value);
-            const c = parseFloat(document.getElementById('paramC').value);
+            const a     = parseFloat(document.getElementById('paramA').value);
+            const b     = parseFloat(document.getElementById('paramB').value);
+            const c     = parseFloat(document.getElementById('paramC').value);
             const iters = parseInt(document.getElementById('iterCount').value);
-            
-            if (attractorObject) { 
-                scene.remove(attractorObject); 
-                attractorObject.geometry.dispose(); 
-                attractorObject.material.dispose(); 
+ 
+            if (attractorObject) {
+                scene.remove(attractorObject);
+                attractorObject.geometry.dispose();
+                attractorObject.material.dispose();
             }
-            
+ 
             const data = generateLorenzPath(a, b, c, iters);
             attractorObject = buildAttractorObject(data);
             if (attractorObject) scene.add(attractorObject);
         }
-
+ 
+        // ── INIT ─────────────────────────────────────────────────────────────
         window.onload = () => {
             initThreeJS();
+ 
+            // Preset dropdown
+            document.getElementById('attractorPreset').addEventListener('change', function() {
+                loadPreset(this.value);
+            });
+ 
+            // Mark formula fields as custom when user edits them manually
+            ['formulaX','formulaY','formulaZ'].forEach(id => {
+                document.getElementById(id).addEventListener('input', () => {
+                    const sel = document.getElementById('attractorPreset');
+                    if (sel.value !== 'custom') {
+                        sel.value = 'custom';
+                        loadPreset('custom');
+                    }
+                });
+            });
+ 
             document.getElementById('generateBtn').onclick = renderAttractor;
-            document.getElementById('toggleModeBtn').onclick = () => { 
-                lineState = !lineState; 
-                document.getElementById('toggleLabel').textContent = lineState ? 'Lines' : 'Points'; 
-                if (attractorObject) renderAttractor(); 
+ 
+            document.getElementById('toggleModeBtn').onclick = () => {
+                lineState = !lineState;
+                document.getElementById('toggleLabel').textContent = lineState ? 'Lines' : 'Points';
+                if (attractorObject) renderAttractor();
             };
-            document.getElementById('toggleTwistBtn').onclick = (e) => { 
-                twistMode = !twistMode; 
+ 
+            document.getElementById('toggleTwistBtn').onclick = (e) => {
+                twistMode = !twistMode;
                 e.currentTarget.classList.toggle('bg-indigo-900');
-                if (attractorObject) renderAttractor(); 
+                if (attractorObject) renderAttractor();
             };
-            document.getElementById('clearBtn').onclick = () => { if (attractorObject) scene.remove(attractorObject); attractorObject = null; };
-            const animate = () => { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); };
+ 
+            document.getElementById('clearBtn').onclick = () => {
+                if (attractorObject) scene.remove(attractorObject);
+                attractorObject = null;
+            };
+ 
+            document.getElementById('exportBtn').onclick = () => {
+                const scale  = parseInt(document.getElementById('exportScale').value);
+                const bgColor = document.getElementById('exportBg').value;
+                const w = renderer.domElement.width  * scale;
+                const h = renderer.domElement.height * scale;
+                const offCanvas = document.createElement('canvas');
+                offCanvas.width = w; offCanvas.height = h;
+                const offRenderer = new THREE.WebGLRenderer({ canvas: offCanvas, antialias: true, preserveDrawingBuffer: true });
+                offRenderer.setSize(w, h);
+                offRenderer.setClearColor(bgColor, 1);
+                offRenderer.render(scene, camera);
+                const link = document.createElement('a');
+                const preset = document.getElementById('attractorPreset').value;
+                link.download = `MuniLorenzViz_${preset}_${scale}x.png`;
+                link.href = offCanvas.toDataURL('image/png');
+                link.click();
+                offRenderer.dispose();
+            };
+ 
+            const animate = () => {
+                requestAnimationFrame(animate);
+                controls.update();
+                renderer.render(scene, camera);
+            };
             animate();
         };
     </script>
 </body>
 </html>
+ 
