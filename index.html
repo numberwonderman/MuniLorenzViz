@@ -7,48 +7,45 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
-        body { margin: 0; background: #0f172a; overflow: hidden; font-family: 'Inter', sans-serif; }
-        canvas { display: block; width: 100vw; height: 100vh; }
+        * { box-sizing: border-box; }
+        html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: #0f172a; overflow: hidden; font-family: 'Inter', sans-serif; }
+        #lorenzCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: block; }
         .control-panel::-webkit-scrollbar { width: 4px; }
         .control-panel::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
- 
-        /* Dropdown styling */
         #attractorPreset {
-            appearance: none;
-            -webkit-appearance: none;
+            appearance: none; -webkit-appearance: none;
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236366f1' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: right 10px center;
-            padding-right: 28px;
-            cursor: pointer;
+            background-repeat: no-repeat; background-position: right 10px center;
+            padding-right: 28px; cursor: pointer;
         }
-        #attractorPreset option {
-            background: #1e293b;
-            color: #e2e8f0;
-        }
+        #attractorPreset option { background: #1e293b; color: #e2e8f0; }
         .preset-badge {
-            display: inline-block;
-            font-size: 9px;
-            padding: 1px 6px;
-            border-radius: 4px;
-            font-weight: 700;
-            letter-spacing: 0.05em;
-            vertical-align: middle;
-            margin-left: 4px;
+            display: inline-block; font-size: 9px; padding: 1px 6px;
+            border-radius: 4px; font-weight: 700; letter-spacing: 0.05em;
+            vertical-align: middle; margin-left: 4px;
         }
-        .preset-badge.core { background: #312e81; color: #a5b4fc; }
+        .preset-badge.core    { background: #312e81; color: #a5b4fc; }
         .preset-badge.classic { background: #14532d; color: #86efac; }
+        .integrator-btn {
+            flex: 1; padding: 6px 4px; border-radius: 8px; font-size: 10px;
+            font-weight: 700; letter-spacing: 0.05em; text-align: center;
+            cursor: pointer; transition: all 0.15s; border: 1px solid #334155;
+            background: #1e293b; color: #64748b;
+        }
+        .integrator-btn.active-euler { background: #1e3a5f; border-color: #3b82f6; color: #93c5fd; }
+        .integrator-btn.active-rk4   { background: #1a3a2a; border-color: #22c55e; color: #86efac; }
+        #dtRow { transition: opacity 0.2s; }
+        #dtRow.disabled { opacity: 0.35; pointer-events: none; }
     </style>
 </head>
-<body class="bg-slate-900 text-slate-100 font-sans">
-    
-    <div id="message-box" class="fixed top-4 right-4 z-50 bg-indigo-600 text-white px-4 py-2 rounded-lg shadow-lg hidden"></div>
+<body>
+    <canvas id="lorenzCanvas"></canvas>
  
-    <div class="control-panel fixed top-0 left-0 h-full w-80 bg-slate-900/90 backdrop-blur-md border-r border-slate-700 p-6 overflow-y-auto z-40 shadow-2xl">
+    <div class="control-panel fixed top-0 left-0 h-full w-80 bg-slate-900/90 backdrop-blur-md border-r border-slate-700 p-6 overflow-y-auto z-40 shadow-2xl text-slate-100">
         <h1 class="text-2xl font-bold text-indigo-400 mb-1">MuniLorenzViz</h1>
         <p class="text-xs text-slate-400 mb-6 uppercase tracking-widest font-semibold">Free Mathematica Sandbox</p>
  
-        <!-- ATTRACTOR PRESET DROPDOWN -->
+        <!-- ATTRACTOR PRESET -->
         <div class="mb-6">
             <div class="flex items-center justify-between mb-2">
                 <h3 class="text-xs font-bold text-indigo-300 uppercase underline decoration-indigo-500/30">Attractor Preset</h3>
@@ -67,24 +64,50 @@
  
         <hr class="border-slate-700 mb-6">
  
-        <div class="space-y-4 mb-6">
-            <h3 class="text-xs font-bold text-indigo-300 uppercase underline decoration-indigo-500/30">Vector Field Equations</h3>
-            <div class="flex flex-col">
-                <label class="text-slate-500 text-[10px] font-bold mb-1 ml-1">NEXT X (dx/dt)</label>
-                <input type="text" id="formulaX" value="y" class="bg-slate-800 border border-slate-600 text-indigo-300 px-3 py-2 rounded-lg font-mono text-sm focus:border-indigo-500 outline-none">
+        <!-- INTEGRATOR TOGGLE -->
+        <div class="mb-6">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-xs font-bold text-indigo-300 uppercase underline decoration-indigo-500/30">Integrator</h3>
+                <span id="integratorNote" class="text-[9px] text-slate-500 italic">discrete map — Euler only</span>
             </div>
-            <div class="flex flex-col">
-                <label class="text-slate-500 text-[10px] font-bold mb-1 ml-1">NEXT Y (dy/dt)</label>
-                <input type="text" id="formulaY" value="Math.sin(z)" class="bg-slate-800 border border-slate-600 text-indigo-300 px-3 py-2 rounded-lg font-mono text-sm focus:border-indigo-500 outline-none">
+            <div class="flex gap-2 mb-3">
+                <button id="eulerBtn" class="integrator-btn active-euler">EULER</button>
+                <button id="rk4Btn" class="integrator-btn">RK4</button>
             </div>
-            <div class="flex flex-col">
-                <label class="text-slate-500 text-[10px] font-bold mb-1 ml-1">NEXT Z (dz/dt)</label>
-                <input type="text" id="formulaZ" value="a + (b * x) + (c * y) - Math.sin(z * z)" class="bg-slate-800 border border-slate-600 text-indigo-300 px-3 py-2 rounded-lg font-mono text-sm focus:border-indigo-500 outline-none">
+            <div id="dtRow" class="flex flex-col disabled">
+                <label class="text-slate-500 text-[10px] font-bold mb-1">TIMESTEP (dt)</label>
+                <input type="number" id="dtInput" value="0.005" step="0.001" min="0.0001" max="0.1"
+                    class="bg-slate-800 border border-slate-700 text-white px-2 py-1.5 rounded-md text-sm w-full">
+                <p class="text-[9px] text-slate-600 mt-1 ml-1">Smaller = more accurate, slower render</p>
             </div>
         </div>
  
         <hr class="border-slate-700 mb-6">
  
+        <!-- VECTOR FIELD EQUATIONS -->
+        <div class="space-y-4 mb-6">
+            <h3 class="text-xs font-bold text-indigo-300 uppercase underline decoration-indigo-500/30">Vector Field Equations</h3>
+            <p id="equationHint" class="text-[9px] text-slate-600 -mt-2 italic hidden">Pure derivatives — dt applied by integrator.</p>
+            <div class="flex flex-col">
+                <label class="text-slate-500 text-[10px] font-bold mb-1 ml-1" id="labelX">NEXT X</label>
+                <input type="text" id="formulaX" value="y"
+                    class="bg-slate-800 border border-slate-600 text-indigo-300 px-3 py-2 rounded-lg font-mono text-sm focus:border-indigo-500 outline-none">
+            </div>
+            <div class="flex flex-col">
+                <label class="text-slate-500 text-[10px] font-bold mb-1 ml-1" id="labelY">NEXT Y</label>
+                <input type="text" id="formulaY" value="Math.sin(z)"
+                    class="bg-slate-800 border border-slate-600 text-indigo-300 px-3 py-2 rounded-lg font-mono text-sm focus:border-indigo-500 outline-none">
+            </div>
+            <div class="flex flex-col">
+                <label class="text-slate-500 text-[10px] font-bold mb-1 ml-1" id="labelZ">NEXT Z</label>
+                <input type="text" id="formulaZ" value="a + (b * x) + (c * y) - Math.sin(z * z)"
+                    class="bg-slate-800 border border-slate-600 text-indigo-300 px-3 py-2 rounded-lg font-mono text-sm focus:border-indigo-500 outline-none">
+            </div>
+        </div>
+ 
+        <hr class="border-slate-700 mb-6">
+ 
+        <!-- INITIAL STATE -->
         <div class="space-y-3 mb-6">
             <h3 class="text-xs font-bold text-indigo-300 uppercase underline decoration-indigo-500/30">Initial State (Seed)</h3>
             <div class="grid grid-cols-3 gap-2">
@@ -103,6 +126,7 @@
             </div>
         </div>
  
+        <!-- PARAMETERS -->
         <div class="grid grid-cols-2 gap-3 mb-6">
             <div class="flex flex-col">
                 <label class="text-slate-500 text-[10px] font-bold mb-1">PARAM A</label>
@@ -122,6 +146,7 @@
             </div>
         </div>
  
+        <!-- CONTROLS -->
         <div class="space-y-3">
             <button id="generateBtn" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-3 rounded-xl font-bold transition-all active:scale-95">Generate Manifold</button>
             <div class="flex gap-2">
@@ -129,12 +154,13 @@
                     Mode: <span id="toggleLabel" class="text-indigo-400">Lines</span>
                 </button>
                 <button id="toggleTwistBtn" class="flex-1 bg-slate-800 border border-slate-700 text-[10px] py-2 rounded-lg hover:bg-slate-700 transition-colors">
-                    <span id="twistLabel" class="text-indigo-400">Twist Mode</span>
+                    <span class="text-indigo-400">Twist Mode</span>
                 </button>
             </div>
             <button id="clearBtn" class="w-full text-slate-500 hover:text-red-400 text-[10px] font-bold transition-colors">RESET WORKSPACE</button>
         </div>
  
+        <!-- JOURNAL EXPORT -->
         <div class="mt-8 pt-6 border-t border-slate-700 space-y-4">
             <h3 class="text-xs font-bold text-emerald-400 uppercase">Journal Export</h3>
             <div class="grid grid-cols-2 gap-2">
@@ -154,269 +180,268 @@
         </div>
     </div>
  
-    <canvas id="lorenzCanvas"></canvas>
- 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
- 
     <script>
-        // ── PRESET DEFINITIONS ──────────────────────────────────────────────
+        // ── PRESETS ──────────────────────────────────────────────────────────
         const PRESETS = {
             muni: {
-                label: "Muni Sinusoidal (Core)",
-                badge: "CORE",
-                badgeClass: "core",
-                desc: "The core sinusoidal map from Muni (2025). The heart of the project.",
-                fx: "y",
-                fy: "Math.sin(z)",
-                fz: "a + (b * x) + (c * y) - Math.sin(z * z)",
-                a: 0.015, b: 0.79, c: 0.9,
-                x0: 0.1, y0: 0.2, z0: 0.3,
-                iters: 20000
+                badge:"CORE", badgeClass:"core", discrete:true,
+                desc:"The core sinusoidal map from Muni (2025). Discrete map — Euler only.",
+                fx:"y", fy:"Math.sin(z)", fz:"a + (b * x) + (c * y) - Math.sin(z * z)",
+                a:0.015, b:0.79, c:0.9, x0:0.1, y0:0.2, z0:0.3, iters:20000, dt:null
             },
             lorenz: {
-                label: "Lorenz",
-                badge: "CLASSIC",
-                badgeClass: "classic",
-                desc: "The butterfly attractor. σ=a, ρ=b, β=c. Uses dt=0.005 baked into formulas.",
-                fx: "x + 0.005 * (a * (y - x))",
-                fy: "y + 0.005 * (x * (b - z) - y)",
-                fz: "z + 0.005 * (x * y - c * z)",
-                a: 10, b: 28, c: 2.667,
-                x0: 0.1, y0: 0.0, z0: 0.0,
-                iters: 50000
+                badge:"CLASSIC", badgeClass:"classic", discrete:false,
+                desc:"Butterfly attractor. σ=a, ρ=b, β=c. Pure derivatives for ODE integrator.",
+                fx:"a * (y - x)", fy:"x * (b - z) - y", fz:"x * y - c * z",
+                a:10, b:28, c:2.667, x0:0.1, y0:0.0, z0:0.0, iters:50000, dt:0.005
             },
             rossler: {
-                label: "Rössler",
-                badge: "CLASSIC",
-                badgeClass: "classic",
-                desc: "Simple spiral chaos. a, b, c are Rössler parameters. dt=0.01 baked in.",
-                fx: "x + 0.01 * (-(y + z))",
-                fy: "y + 0.01 * (x + a * y)",
-                fz: "z + 0.01 * (b + z * (x - c))",
-                a: 0.2, b: 0.2, c: 5.7,
-                x0: 0.1, y0: 0.0, z0: 0.0,
-                iters: 50000
+                badge:"CLASSIC", badgeClass:"classic", discrete:false,
+                desc:"Simple spiral chaos. Pure derivative form.",
+                fx:"-(y + z)", fy:"x + a * y", fz:"b + z * (x - c)",
+                a:0.2, b:0.2, c:5.7, x0:0.1, y0:0.0, z0:0.0, iters:50000, dt:0.01
             },
             hadley: {
-                label: "Hadley",
-                badge: "CLASSIC",
-                badgeClass: "classic",
-                desc: "Atmospheric circulation model. dt=0.02 baked in.",
-                fx: "x + 0.02 * (-y*y - z*z - a*x + a*c)",
-                fy: "y + 0.02 * (x*y - b*x*z - y + b)",
-                fz: "z + 0.02 * (b*x*y + x*z - z)",
-                a: 0.2, b: 4.0, c: 8.0,
-                x0: 0.0, y0: 0.0, z0: 1.3,
-                iters: 50000
+                badge:"CLASSIC", badgeClass:"classic", discrete:false,
+                desc:"Atmospheric circulation model. Pure derivative form.",
+                fx:"-y*y - z*z - a*x + a*c", fy:"x*y - b*x*z - y + b", fz:"b*x*y + x*z - z",
+                a:0.2, b:4.0, c:8.0, x0:0.0, y0:0.0, z0:1.3, iters:50000, dt:0.02
             },
             thomas: {
-                label: "Thomas (Cyclic)",
-                badge: "CLASSIC",
-                badgeClass: "classic",
-                desc: "Cyclically symmetric dissipative flow. b=damping parameter. dt=0.05 baked in.",
-                fx: "x + 0.05 * (Math.sin(y) - a * x)",
-                fy: "y + 0.05 * (Math.sin(z) - a * y)",
-                fz: "z + 0.05 * (Math.sin(x) - a * z)",
-                a: 0.19, b: 0.19, c: 0.19,
-                x0: 0.1, y0: 0.0, z0: 0.0,
-                iters: 50000
+                badge:"CLASSIC", badgeClass:"classic", discrete:false,
+                desc:"Cyclically symmetric dissipative flow. a=damping. Pure derivative form.",
+                fx:"Math.sin(y) - a * x", fy:"Math.sin(z) - a * y", fz:"Math.sin(x) - a * z",
+                a:0.19, b:0.19, c:0.19, x0:0.1, y0:0.0, z0:0.0, iters:50000, dt:0.05
             },
             custom: {
-                label: "Custom",
-                badge: "CUSTOM",
-                badgeClass: "core",
-                desc: "Edit the equations and parameters freely below.",
-                fx: null, fy: null, fz: null,
-                a: null, b: null, c: null,
-                x0: null, y0: null, z0: null,
-                iters: null
+                badge:"CUSTOM", badgeClass:"core", discrete:false,
+                desc:"Edit equations and parameters freely. Euler for discrete maps, RK4 for ODEs.",
+                fx:null, fy:null, fz:null, a:null, b:null, c:null,
+                x0:null, y0:null, z0:null, iters:null, dt:null
             }
         };
+ 
+        // ── STATE ────────────────────────────────────────────────────────────
+        let scene, camera, renderer, controls, attractorObject;
+        let lineState = true, twistMode = false, useRK4 = false, isDiscrete = true;
  
         // ── PRESET LOADER ────────────────────────────────────────────────────
         function loadPreset(key) {
             const p = PRESETS[key];
             if (!p) return;
- 
-            const badge = document.getElementById('presetBadge');
-            const desc  = document.getElementById('presetDesc');
- 
-            badge.textContent = p.badge;
-            badge.className = `preset-badge ${p.badgeClass}`;
-            desc.textContent = p.desc;
- 
-            if (key === 'custom') return; // leave fields as-is
- 
-            document.getElementById('formulaX').value = p.fx;
-            document.getElementById('formulaY').value = p.fy;
-            document.getElementById('formulaZ').value = p.fz;
-            document.getElementById('paramA').value   = p.a;
-            document.getElementById('paramB').value   = p.b;
-            document.getElementById('paramC').value   = p.c;
-            document.getElementById('startX').value   = p.x0;
-            document.getElementById('startY').value   = p.y0;
-            document.getElementById('startZ').value   = p.z0;
+            document.getElementById('presetBadge').textContent = p.badge;
+            document.getElementById('presetBadge').className   = `preset-badge ${p.badgeClass}`;
+            document.getElementById('presetDesc').textContent  = p.desc;
+            if (key === 'custom') { isDiscrete = false; updateIntegratorUI(); return; }
+            document.getElementById('formulaX').value  = p.fx;
+            document.getElementById('formulaY').value  = p.fy;
+            document.getElementById('formulaZ').value  = p.fz;
+            document.getElementById('paramA').value    = p.a;
+            document.getElementById('paramB').value    = p.b;
+            document.getElementById('paramC').value    = p.c;
+            document.getElementById('startX').value    = p.x0;
+            document.getElementById('startY').value    = p.y0;
+            document.getElementById('startZ').value    = p.z0;
             document.getElementById('iterCount').value = p.iters;
+            if (p.dt !== null) document.getElementById('dtInput').value = p.dt;
+            isDiscrete = p.discrete;
+            if (isDiscrete) useRK4 = false;
+            updateIntegratorUI();
         }
  
-        // ── THREE.JS STATE ───────────────────────────────────────────────────
-        let scene, camera, renderer, controls, attractorObject, axesHelper;
-        let lineState = true, twistMode = false;
+        function updateIntegratorUI() {
+            const eulerBtn = document.getElementById('eulerBtn');
+            const rk4Btn   = document.getElementById('rk4Btn');
+            const dtRow    = document.getElementById('dtRow');
+            const note     = document.getElementById('integratorNote');
+            const hint     = document.getElementById('equationHint');
+            rk4Btn.disabled      = isDiscrete;
+            rk4Btn.style.opacity = isDiscrete ? '0.3' : '1';
+            rk4Btn.style.cursor  = isDiscrete ? 'not-allowed' : 'pointer';
+            if (useRK4 && !isDiscrete) {
+                eulerBtn.className = 'integrator-btn';
+                rk4Btn.className   = 'integrator-btn active-rk4';
+                dtRow.classList.remove('disabled');
+                note.textContent   = 'integral curves — journal quality';
+                hint.classList.remove('hidden');
+                document.getElementById('labelX').textContent = 'dx/dt';
+                document.getElementById('labelY').textContent = 'dy/dt';
+                document.getElementById('labelZ').textContent = 'dz/dt';
+            } else {
+                eulerBtn.className = 'integrator-btn active-euler';
+                rk4Btn.className   = 'integrator-btn';
+                dtRow.classList.add('disabled');
+                note.textContent   = isDiscrete ? 'discrete map — Euler only' : 'fast preview';
+                hint.classList.add('hidden');
+                document.getElementById('labelX').textContent = isDiscrete ? 'NEXT X' : 'dx/dt';
+                document.getElementById('labelY').textContent = isDiscrete ? 'NEXT Y' : 'dy/dt';
+                document.getElementById('labelZ').textContent = isDiscrete ? 'NEXT Z' : 'dz/dt';
+            }
+        }
  
-        const generateLorenzPath = (a, b, c, iterations) => {
+        // ── INTEGRATORS ──────────────────────────────────────────────────────
+        function stepEuler(fx, fy, fz, x, y, z, a, b, c, dt, discrete) {
+            const dx = fx(x,y,z,a,b,c), dy = fy(x,y,z,a,b,c), dz = fz(x,y,z,a,b,c);
+            return discrete ? {x:dx,y:dy,z:dz} : {x:x+dt*dx, y:y+dt*dy, z:z+dt*dz};
+        }
+ 
+        function stepRK4(fx, fy, fz, x, y, z, a, b, c, dt) {
+            const k1x=fx(x,y,z,a,b,c), k1y=fy(x,y,z,a,b,c), k1z=fz(x,y,z,a,b,c);
+            const x2=x+.5*dt*k1x, y2=y+.5*dt*k1y, z2=z+.5*dt*k1z;
+            const k2x=fx(x2,y2,z2,a,b,c), k2y=fy(x2,y2,z2,a,b,c), k2z=fz(x2,y2,z2,a,b,c);
+            const x3=x+.5*dt*k2x, y3=y+.5*dt*k2y, z3=z+.5*dt*k2z;
+            const k3x=fx(x3,y3,z3,a,b,c), k3y=fy(x3,y3,z3,a,b,c), k3z=fz(x3,y3,z3,a,b,c);
+            const x4=x+dt*k3x, y4=y+dt*k3y, z4=z+dt*k3z;
+            const k4x=fx(x4,y4,z4,a,b,c), k4y=fy(x4,y4,z4,a,b,c), k4z=fz(x4,y4,z4,a,b,c);
+            return {
+                x: x+(dt/6)*(k1x+2*k2x+2*k3x+k4x),
+                y: y+(dt/6)*(k1y+2*k2y+2*k3y+k4y),
+                z: z+(dt/6)*(k1z+2*k2z+2*k3z+k4z)
+            };
+        }
+ 
+        // ── PATH GENERATOR ───────────────────────────────────────────────────
+        function generatePath(a, b, c, iterations) {
             let x = parseFloat(document.getElementById('startX').value) || 0.1;
             let y = parseFloat(document.getElementById('startY').value) || 0.2;
             let z = parseFloat(document.getElementById('startZ').value) || 0.3;
- 
-            const formulaX = document.getElementById('formulaX').value;
-            const formulaY = document.getElementById('formulaY').value;
-            const formulaZ = document.getElementById('formulaZ').value;
- 
-            let getNextX, getNextY, getNextZ;
+            const dt = parseFloat(document.getElementById('dtInput').value) || 0.005;
+            let fx, fy, fz;
             try {
-                getNextX = new Function('x', 'y', 'z', 'a', 'b', 'c', `return ${formulaX};`);
-                getNextY = new Function('x', 'y', 'z', 'a', 'b', 'c', `return ${formulaY};`);
-                getNextZ = new Function('x', 'y', 'z', 'a', 'b', 'c', `return ${formulaZ};`);
-            } catch (err) {
-                console.error("Syntax in formula box:", err);
-                return { points: [], colors: [] };
-            }
+                fx = new Function('x','y','z','a','b','c','return '+document.getElementById('formulaX').value);
+                fy = new Function('x','y','z','a','b','c','return '+document.getElementById('formulaY').value);
+                fz = new Function('x','y','z','a','b','c','return '+document.getElementById('formulaZ').value);
+            } catch(e) { console.error(e); return {points:[],colors:[]}; }
  
-            const points = [], colors = [];
-            const colorStart   = new THREE.Color(0x6366f1);
-            const colorEnd     = new THREE.Color(0x22d3ee);
-            const twistColorPos = new THREE.Color(0xe69f00);
-            const twistColorNeg = new THREE.Color(0x0072b2);
+            const points=[], colors=[];
+            const cS=new THREE.Color(0x6366f1), cE=new THREE.Color(0x22d3ee);
+            const tP=new THREE.Color(0xe69f00), tN=new THREE.Color(0x0072b2);
  
-            for (let i = 0; i < iterations; i++) {
+            for (let i=0; i<iterations; i++) {
                 try {
-                    let nextX = getNextX(x, y, z, a, b, c);
-                    let nextY = getNextY(x, y, z, a, b, c);
-                    let nextZ = getNextZ(x, y, z, a, b, c);
-                    x = nextX; y = nextY; z = nextZ;
- 
-                    points.push(new THREE.Vector3(x * 25, y * 25, z * 25));
- 
-                    if (twistMode && i > 3) {
-                        const v1 = new THREE.Vector3().subVectors(points[i],   points[i-1]);
-                        const v2 = new THREE.Vector3().subVectors(points[i-1], points[i-2]);
-                        const v3 = new THREE.Vector3().subVectors(points[i-2], points[i-3]);
-                        const torsion = new THREE.Vector3().crossVectors(v1, v2).dot(v3);
-                        const vColor  = new THREE.Color().copy(twistColorNeg).lerp(twistColorPos, (Math.tanh(torsion * 50) + 1) / 2);
-                        colors.push(vColor.r, vColor.g, vColor.b);
+                    const n = (useRK4 && !isDiscrete)
+                        ? stepRK4(fx,fy,fz,x,y,z,a,b,c,dt)
+                        : stepEuler(fx,fy,fz,x,y,z,a,b,c,dt,isDiscrete);
+                    x=n.x; y=n.y; z=n.z;
+                    if (!isFinite(x)||!isFinite(y)||!isFinite(z)) break;
+                    points.push(new THREE.Vector3(x*25,y*25,z*25));
+                    if (twistMode && i>3) {
+                        const v1=new THREE.Vector3().subVectors(points[i],points[i-1]);
+                        const v2=new THREE.Vector3().subVectors(points[i-1],points[i-2]);
+                        const v3=new THREE.Vector3().subVectors(points[i-2],points[i-3]);
+                        const tor=new THREE.Vector3().crossVectors(v1,v2).dot(v3);
+                        const vc=new THREE.Color().copy(tN).lerp(tP,(Math.tanh(tor*50)+1)/2);
+                        colors.push(vc.r,vc.g,vc.b);
                     } else {
-                        const vColor = new THREE.Color().copy(colorStart).lerp(colorEnd, i / iterations);
-                        colors.push(vColor.r, vColor.g, vColor.b);
+                        const vc=new THREE.Color().copy(cS).lerp(cE,i/iterations);
+                        colors.push(vc.r,vc.g,vc.b);
                     }
                 } catch(e) { break; }
             }
-            return { points, colors };
-        };
+            return {points,colors};
+        }
  
+        // ── THREE.JS ─────────────────────────────────────────────────────────
         function buildAttractorObject(data) {
-            if (data.points.length === 0) return null;
-            const geometry = new THREE.BufferGeometry().setFromPoints(data.points);
-            geometry.setAttribute('color', new THREE.Float32BufferAttribute(data.colors, 3));
-            const mat = { vertexColors: true, transparent: true, opacity: 0.8 };
+            if (!data.points.length) return null;
+            const geo = new THREE.BufferGeometry().setFromPoints(data.points);
+            geo.setAttribute('color', new THREE.Float32BufferAttribute(data.colors,3));
+            const mat = {vertexColors:true, transparent:true, opacity:0.8};
             return lineState
-                ? new THREE.Line(geometry, new THREE.LineBasicMaterial(mat))
-                : new THREE.Points(geometry, new THREE.PointsMaterial({...mat, size: 0.15}));
+                ? new THREE.Line(geo, new THREE.LineBasicMaterial(mat))
+                : new THREE.Points(geo, new THREE.PointsMaterial({...mat, size:0.15}));
         }
  
         function initThreeJS() {
             const canvas = document.getElementById('lorenzCanvas');
+            // Use window dimensions directly — avoids 0x0 sizing bug
+            const W = window.innerWidth, H = window.innerHeight;
+            canvas.width  = W;
+            canvas.height = H;
             scene    = new THREE.Scene();
-            camera   = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 2000);
-            camera.position.set(50, 50, 50);
-            renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
-            renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+            camera   = new THREE.PerspectiveCamera(75, W/H, 0.1, 2000);
+            camera.position.set(50,50,50);
+            renderer = new THREE.WebGLRenderer({canvas, antialias:true, preserveDrawingBuffer:true});
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setSize(W, H);
+            renderer.setClearColor(0x0f172a, 1);
             controls = new THREE.OrbitControls(camera, renderer.domElement);
-            axesHelper = new THREE.AxesHelper(10);
-            scene.add(axesHelper);
+            controls.enableDamping = true;
+            scene.add(new THREE.AxesHelper(10));
+ 
+            window.addEventListener('resize', () => {
+                const w=window.innerWidth, h=window.innerHeight;
+                camera.aspect = w/h;
+                camera.updateProjectionMatrix();
+                renderer.setSize(w,h);
+            });
         }
  
         function renderAttractor() {
-            const a     = parseFloat(document.getElementById('paramA').value);
-            const b     = parseFloat(document.getElementById('paramB').value);
-            const c     = parseFloat(document.getElementById('paramC').value);
-            const iters = parseInt(document.getElementById('iterCount').value);
- 
+            const a=parseFloat(document.getElementById('paramA').value);
+            const b=parseFloat(document.getElementById('paramB').value);
+            const c=parseFloat(document.getElementById('paramC').value);
+            const n=parseInt(document.getElementById('iterCount').value);
             if (attractorObject) {
                 scene.remove(attractorObject);
                 attractorObject.geometry.dispose();
                 attractorObject.material.dispose();
             }
- 
-            const data = generateLorenzPath(a, b, c, iters);
-            attractorObject = buildAttractorObject(data);
+            attractorObject = buildAttractorObject(generatePath(a,b,c,n));
             if (attractorObject) scene.add(attractorObject);
         }
  
         // ── INIT ─────────────────────────────────────────────────────────────
         window.onload = () => {
             initThreeJS();
+            updateIntegratorUI();
  
-            // Preset dropdown
-            document.getElementById('attractorPreset').addEventListener('change', function() {
-                loadPreset(this.value);
-            });
- 
-            // Mark formula fields as custom when user edits them manually
+            document.getElementById('attractorPreset').addEventListener('change', function() { loadPreset(this.value); });
             ['formulaX','formulaY','formulaZ'].forEach(id => {
                 document.getElementById(id).addEventListener('input', () => {
                     const sel = document.getElementById('attractorPreset');
-                    if (sel.value !== 'custom') {
-                        sel.value = 'custom';
-                        loadPreset('custom');
-                    }
+                    if (sel.value !== 'custom') { sel.value='custom'; loadPreset('custom'); }
                 });
             });
  
+            document.getElementById('eulerBtn').onclick = () => { useRK4=false; updateIntegratorUI(); };
+            document.getElementById('rk4Btn').onclick   = () => { if(!isDiscrete){useRK4=true; updateIntegratorUI();} };
             document.getElementById('generateBtn').onclick = renderAttractor;
  
             document.getElementById('toggleModeBtn').onclick = () => {
-                lineState = !lineState;
-                document.getElementById('toggleLabel').textContent = lineState ? 'Lines' : 'Points';
+                lineState=!lineState;
+                document.getElementById('toggleLabel').textContent = lineState?'Lines':'Points';
                 if (attractorObject) renderAttractor();
             };
- 
             document.getElementById('toggleTwistBtn').onclick = (e) => {
-                twistMode = !twistMode;
+                twistMode=!twistMode;
                 e.currentTarget.classList.toggle('bg-indigo-900');
                 if (attractorObject) renderAttractor();
             };
- 
             document.getElementById('clearBtn').onclick = () => {
-                if (attractorObject) scene.remove(attractorObject);
-                attractorObject = null;
+                if (attractorObject) { scene.remove(attractorObject); attractorObject=null; }
             };
- 
             document.getElementById('exportBtn').onclick = () => {
-                const scale  = parseInt(document.getElementById('exportScale').value);
-                const bgColor = document.getElementById('exportBg').value;
-                const w = renderer.domElement.width  * scale;
-                const h = renderer.domElement.height * scale;
-                const offCanvas = document.createElement('canvas');
-                offCanvas.width = w; offCanvas.height = h;
-                const offRenderer = new THREE.WebGLRenderer({ canvas: offCanvas, antialias: true, preserveDrawingBuffer: true });
-                offRenderer.setSize(w, h);
-                offRenderer.setClearColor(bgColor, 1);
-                offRenderer.render(scene, camera);
-                const link = document.createElement('a');
-                const preset = document.getElementById('attractorPreset').value;
-                link.download = `MuniLorenzViz_${preset}_${scale}x.png`;
-                link.href = offCanvas.toDataURL('image/png');
-                link.click();
-                offRenderer.dispose();
+                const scale=parseInt(document.getElementById('exportScale').value);
+                const bg=document.getElementById('exportBg').value;
+                const w=window.innerWidth*scale, h=window.innerHeight*scale;
+                const oc=document.createElement('canvas'); oc.width=w; oc.height=h;
+                const or=new THREE.WebGLRenderer({canvas:oc,antialias:true,preserveDrawingBuffer:true});
+                or.setSize(w,h); or.setClearColor(bg,1); or.render(scene,camera);
+                const preset=document.getElementById('attractorPreset').value;
+                const integ=(useRK4&&!isDiscrete)?'RK4':'Euler';
+                const a=document.createElement('a');
+                a.download=`MuniLorenzViz_${preset}_${integ}_${scale}x.png`;
+                a.href=oc.toDataURL('image/png'); a.click(); or.dispose();
             };
  
-            const animate = () => {
-                requestAnimationFrame(animate);
-                controls.update();
-                renderer.render(scene, camera);
-            };
+            const animate = () => { requestAnimationFrame(animate); controls.update(); renderer.render(scene,camera); };
             animate();
+ 
+            // Auto-generate on load so the canvas isn't blank
+            renderAttractor();
         };
     </script>
 </body>
