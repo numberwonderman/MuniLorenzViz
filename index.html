@@ -7,65 +7,170 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <style>
+        /* Tooltip utilities extending Tailwind */
+        .tooltip-text {
+            visibility: hidden;
+            position: absolute;
+            z-index: 50;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #0f172a;
+            color: #fff;
+            padding: 0.5rem;
+            border-radius: 0.25rem;
+            width: 14rem;
+            font-size: 0.75rem;
+            line-height: 1rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+            border: 1px solid #334155;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+        .tooltip-container:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+    </style>
 </head>
-<body>
+<body class="bg-slate-900 text-slate-100 font-[Inter]">
     <div id="message-box" class="message-box"></div>
 
-    <div class="control-panel">
-        <h1 class="text-3xl font-bold text-center text-indigo-400 mb-2">Discrete MuniLorenzViz</h1>
-        <p class="text-center text-gray-400 mb-6 text-sm">Visualizing the 3D Sinusoidal Map.</p>
+    <div class="control-panel max-h-[95vh] overflow-y-auto">
+        <h1 class="text-2xl font-bold text-center text-indigo-400 mb-1">MuniLorenzViz</h1>
+        <p class="text-center text-gray-400 mb-4 text-xs font-mono">3D Sinusoidal Map Explorer</p>
 
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div class="flex flex-col">
-                <label class="text-gray-400 text-xs font-bold mb-1">Parameter a:</label>
-                <input type="number" id="paramA" value="0.015" step="0.001">
-            </div>
-            <div class="flex flex-col">
-                <label class="text-gray-400 text-xs font-bold mb-1">Parameter b:</label>
-                <input type="number" id="paramB" value="0.79" step="0.01">
-            </div>
-            <div class="flex flex-col">
-                <label class="text-gray-400 text-xs font-bold mb-1">Parameter c:</label>
-                <input type="number" id="paramC" value="0.9" step="0.01">
-            </div>
-            <div class="flex flex-col">
-                <label class="text-gray-400 text-xs font-bold mb-1">Iterations:</label>
-                <input type="number" id="iterCount" value="20000" step="1000">
+        <div class="mb-4 bg-slate-800 p-3 rounded-lg border border-slate-700">
+            <label class="text-xs font-bold text-indigo-300 block mb-2 tracking-wide uppercase">Attractor Presets</label>
+            <div class="grid grid-cols-3 gap-2">
+                <button onclick="loadPreset(0.0, 0.8, 0.99, 0.1, 0.1, 0.1)" class="tooltip-container relative bg-slate-700 hover:bg-slate-600 px-2 py-1.5 rounded text-xs font-semibold transition-all">
+                    Limit Cycle
+                    <span class="tooltip-text font-normal">a=0.0, b=0.8, c=0.99. System settles into a predictable, stable, closed periodic orbital trajectory.</span>
+                </button>
+                <button onclick="loadPreset(0.015, 0.8, 0.99, 0.1, 0.1, 0.1)" class="tooltip-container relative bg-slate-700 hover:bg-slate-600 px-2 py-1.5 rounded text-xs font-semibold transition-all">
+                    Twisted Ribbon
+                    <span class="tooltip-text font-normal">a=0.015, b=0.8, c=0.99. Highlights the non-orientable folding action of the quadratic sin(z²) term.</span>
+                </button>
+                <button onclick="loadPreset(0.3, 3.9, 0.99, 0.1, 0.1, 0.1)" class="tooltip-container relative bg-slate-700 hover:bg-slate-600 px-2 py-1.5 rounded text-xs font-semibold transition-all">
+                    Hyperchaos
+                    <span class="tooltip-text font-normal">a=0.3, b=3.9, c=0.99. High system energy producing multiple positive Lyapunov exponents, saturating space.</span>
+                </button>
             </div>
         </div>
 
-        <div class="flex gap-4 items-center flex-wrap">
-            <button id="generateBtn" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white py-3 rounded-lg font-bold transition-all">Generate Attractor</button>
-            <button id="toggleModeBtn" class="toggle-btn">
-                <span class="toggle-indicator"></span>
+        <div class="mb-4 bg-slate-800 p-3 rounded-lg border border-slate-700 space-y-3">
+            <span class="text-xs font-bold text-slate-400 block tracking-wide uppercase">System Parameters</span>
+            
+            <div class="flex flex-col">
+                <div class="flex justify-between items-center mb-1">
+                    <label class="tooltip-container relative text-xs font-semibold text-slate-300 cursor-help border-b border-dashed border-slate-500">
+                        Parameter a
+                        <span class="tooltip-text font-normal">Primary bifurcation driver. Dictates transitions from structured simple cycles to complete topological chaos.</span>
+                    </label>
+                    <span id="valA" class="text-xs font-mono text-indigo-400">0.015</span>
+                </div>
+                <input type="range" id="paramA" min="0.0" max="0.5" step="0.001" value="0.015" class="w-full accent-indigo-500">
+            </div>
+
+            <div class="flex flex-col">
+                <div class="flex justify-between items-center mb-1">
+                    <label class="tooltip-container relative text-xs font-semibold text-slate-300 cursor-help border-b border-dashed border-slate-500">
+                        Parameter b
+                        <span class="tooltip-text font-normal">Linear coupling scale. Higher coefficients expand phase boundaries and introduce hyperchaotic geometric volume stretching.</span>
+                    </label>
+                    <span id="valB" class="text-xs font-mono text-indigo-400">0.79</span>
+                </div>
+                <input type="range" id="paramB" min="0.0" max="4.0" step="0.01" value="0.79" class="w-full accent-indigo-500">
+            </div>
+
+            <div class="flex flex-col">
+                <div class="flex justify-between items-center mb-1">
+                    <label class="tooltip-container relative text-xs font-semibold text-slate-300 cursor-help border-b border-dashed border-slate-500">
+                        Parameter c
+                        <span class="tooltip-text font-normal">System damping/dissipation control. Interacts with the iterative sine sequence to lock map stability.</span>
+                    </label>
+                    <span id="valC" class="text-xs font-mono text-indigo-400">0.90</span>
+                </div>
+                <input type="range" id="paramC" min="0.0" max="1.5" step="0.01" value="0.90" class="w-full accent-indigo-500">
+            </div>
+        </div>
+
+        <div class="mb-4 bg-slate-800 p-3 rounded-lg border border-slate-700 space-y-3">
+            <span class="text-xs font-bold text-slate-400 block tracking-wide uppercase">Initial Boundary Conditions</span>
+            
+            <div class="flex flex-col">
+                <div class="flex justify-between items-center mb-1">
+                    <label class="tooltip-container relative text-xs font-semibold text-slate-300 cursor-help border-b border-dashed border-slate-500">
+                        Initial X₀
+                        <span class="tooltip-text font-normal">Starting state vector on the X-axis. Shifts origin tracking boundaries during early mapping stages.</span>
+                    </label>
+                    <span id="valX0" class="text-xs font-mono text-emerald-400">0.10</span>
+                </div>
+                <input type="range" id="initX" min="-2.0" max="2.0" step="0.01" value="0.10" class="w-full accent-emerald-500">
+            </div>
+
+            <div class="flex flex-col">
+                <div class="flex justify-between items-center mb-1">
+                    <label class="tooltip-container relative text-xs font-semibold text-slate-300 cursor-help border-b border-dashed border-slate-500">
+                        Initial Y₀
+                        <span class="tooltip-text font-normal">Starting state vector on the Y-axis. Interacts immediately with structural sinusoidal limits.</span>
+                    </label>
+                    <span id="valY0" class="text-xs font-mono text-emerald-400">0.10</span>
+                </div>
+                <input type="range" id="initY" min="-2.0" max="2.0" step="0.01" value="0.10" class="w-full accent-emerald-500">
+            </div>
+
+            <div class="flex flex-col">
+                <div class="flex justify-between items-center mb-1">
+                    <label class="tooltip-container relative text-xs font-semibold text-slate-300 cursor-help border-b border-dashed border-slate-500">
+                        Initial Z₀
+                        <span class="tooltip-text font-normal">Starting state vector on the Z-axis. Modulates the initial phase angle of the folding equation.</span>
+                    </label>
+                    <span id="valZ0" class="text-xs font-mono text-emerald-400">0.10</span>
+                </div>
+                <input type="range" id="initZ" min="-2.0" max="2.0" step="0.01" value="0.10" class="w-full accent-emerald-500">
+            </div>
+        </div>
+
+        <div class="mb-4 flex flex-col">
+            <div class="flex justify-between items-center mb-1">
+                <label class="text-gray-400 text-xs font-bold">Calculated Iterations:</label>
+                <span id="valIters" class="text-xs font-mono text-slate-300">20,000</span>
+            </div>
+            <input type="range" id="iterCount" min="1000" max="100000" step="1000" value="20000" class="w-full accent-slate-400">
+        </div>
+
+        <div class="flex gap-2 items-center flex-wrap mb-4">
+            <button id="generateBtn" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white py-2.5 rounded-lg text-sm font-bold transition-all shadow-md">Generate</button>
+            <button id="toggleModeBtn" class="toggle-btn text-xs py-2 px-3">
                 <span id="toggleLabel">Lines</span>
             </button>
-            <button id="toggleTwistBtn" class="toggle-btn" title="Color by Twist (Torsion)">
-                <span class="toggle-indicator"></span>
+            <button id="toggleTwistBtn" class="toggle-btn text-xs py-2 px-3" title="Color by Twist (Torsion)">
                 <span>Twist Mode</span>
             </button>
-            <button id="clearBtn" class="px-6 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-bold transition-all">Clear</button>
+            <button id="clearBtn" class="py-2 px-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-xs font-bold transition-all">Clear</button>
         </div>
 
-        <div class="flex gap-4 items-end flex-wrap mt-4 pt-4 border-t border-slate-600">
-            <div class="flex flex-col">
-                <label class="text-gray-400 text-xs font-bold mb-1">Export Resolution:</label>
-                <select id="exportScale" class="bg-slate-700 border border-slate-500 text-white px-3 py-2 rounded-lg text-sm">
-                    <option value="2">2× — Screen</option>
-                    <option value="4" selected>4× — Journal</option>
-                    <option value="6">6× — Print</option>
+        <div class="flex gap-2 items-end flex-wrap pt-3 border-t border-slate-700">
+            <div class="flex-1 min-w-[70px] flex flex-col">
+                <label class="text-gray-400 text-[10px] font-bold mb-1 uppercase">Scale</label>
+                <select id="exportScale" class="bg-slate-700 border border-slate-600 text-white px-2 py-1.5 rounded text-xs">
+                    <option value="2">2× - Web</option>
+                    <option value="4" selected>4× - Journal</option>
+                    <option value="6">6× - Print</option>
                 </select>
             </div>
-            <div class="flex flex-col">
-                <label class="text-gray-400 text-xs font-bold mb-1">Background:</label>
-                <select id="exportBg" class="bg-slate-700 border border-slate-500 text-white px-3 py-2 rounded-lg text-sm">
+            <div class="flex-1 min-w-[80px] flex flex-col">
+                <label class="text-gray-400 text-[10px] font-bold mb-1 uppercase">BG</label>
+                <select id="exportBg" class="bg-slate-700 border border-slate-600 text-white px-2 py-1.5 rounded text-xs">
                     <option value="#000000" selected>Black</option>
                     <option value="#ffffff">White</option>
-                    <option value="transparent">Transparent</option>
+                    <option value="transparent">Alpha</option>
                 </select>
             </div>
-            <button id="exportBtn" class="flex-1 bg-emerald-700 hover:bg-emerald-600 text-white py-2 px-6 rounded-lg font-bold transition-all flex items-center justify-center gap-2">
-                Export Image
+            <button id="exportBtn" class="bg-emerald-700 hover:bg-emerald-600 text-white py-1.5 px-3 rounded text-xs font-bold transition-all">
+                Export
             </button>
         </div>
     </div>
@@ -79,8 +184,9 @@
         let scene, camera, renderer, controls, attractorObject, axesHelper;
         let lineState = true, twistMode = false;
 
-        const generateLorenzPath = (a, b, c, iterations) => {
-            let x = 0.1, y = 0.1, z = 0.1;
+        // Path generation supporting variable Initial Boundary States
+        const generateLorenzPath = (a, b, c, iterations, x0, y0, z0) => {
+            let x = x0, y = y0, z = z0;
             const points = [], colors = [];
             const colorStart = new THREE.Color(0x6366f1), colorEnd = new THREE.Color(0x22d3ee);
             const twistColorPos = new THREE.Color(0xe69f00), twistColorNeg = new THREE.Color(0x0072b2);
@@ -127,11 +233,43 @@
         }
 
         function renderAttractor() {
-            const a = parseFloat(document.getElementById('paramA').value), b = parseFloat(document.getElementById('paramB').value), c = parseFloat(document.getElementById('paramC').value), iters = parseInt(document.getElementById('iterCount').value);
-            if (attractorObject) { scene.remove(attractorObject); attractorObject.geometry.dispose(); attractorObject.material.dispose(); }
-            const data = generateLorenzPath(a, b, c, iters);
+            const a = parseFloat(document.getElementById('paramA').value);
+            const b = parseFloat(document.getElementById('paramB').value);
+            const c = parseFloat(document.getElementById('paramC').value);
+            const x0 = parseFloat(document.getElementById('initX').value);
+            const y0 = parseFloat(document.getElementById('initY').value);
+            const z0 = parseFloat(document.getElementById('initZ').value);
+            const iters = parseInt(document.getElementById('iterCount').value);
+
+            // Dynamically update textual displays
+            document.getElementById('valA').textContent = a.toFixed(3);
+            document.getElementById('valB').textContent = b.toFixed(2);
+            document.getElementById('valC').textContent = c.toFixed(2);
+            document.getElementById('valX0').textContent = x0.toFixed(2);
+            document.getElementById('valY0').textContent = y0.toFixed(2);
+            document.getElementById('valZ0').textContent = z0.toFixed(2);
+            document.getElementById('valIters').textContent = iters.toLocaleString();
+
+            if (attractorObject) { 
+                scene.remove(attractorObject); 
+                attractorObject.geometry.dispose(); 
+                attractorObject.material.dispose(); 
+            }
+            
+            const data = generateLorenzPath(a, b, c, iters, x0, y0, z0);
             attractorObject = buildAttractorObject(data);
             scene.add(attractorObject);
+        }
+
+        // Programmatic injection endpoint for presets button actions
+        function loadPreset(a, b, c, x0, y0, z0) {
+            document.getElementById('paramA').value = a;
+            document.getElementById('paramB').value = b;
+            document.getElementById('paramC').value = c;
+            document.getElementById('initX').value = x0;
+            document.getElementById('initY').value = y0;
+            document.getElementById('initZ').value = z0;
+            renderAttractor();
         }
 
         function exportImage() {
@@ -147,7 +285,7 @@
             off.domElement.toBlob((blob) => {
                 const link = document.createElement('a');
                 link.href = URL.createObjectURL(blob);
-                link.download = `lorenz_export_${scale}x.png`;
+                link.download = `muni_map_a${document.getElementById('paramA').value}_b${document.getElementById('paramB').value}_${scale}x.png`;
                 link.click();
                 off.dispose();
             }, 'image/png');
@@ -157,13 +295,42 @@
 
         window.onload = () => {
             initThreeJS();
+            
+            // Re-render bindings tied smoothly to slider input movements
+            const dynamicInputs = ['paramA', 'paramB', 'paramC', 'initX', 'initY', 'initZ', 'iterCount'];
+            dynamicInputs.forEach(id => {
+                document.getElementById(id).oninput = renderAttractor;
+            });
+
             document.getElementById('generateBtn').onclick = renderAttractor;
             document.getElementById('exportBtn').onclick = exportImage;
-            document.getElementById('toggleModeBtn').onclick = (e) => { lineState = !lineState; e.currentTarget.classList.toggle('active'); document.getElementById('toggleLabel').textContent = lineState ? 'Lines' : 'Points'; if (attractorObject) renderAttractor(); };
-            document.getElementById('toggleTwistBtn').onclick = (e) => { twistMode = !twistMode; e.currentTarget.classList.toggle('active'); if (attractorObject) renderAttractor(); };
-            document.getElementById('clearBtn').onclick = () => { if (attractorObject) { scene.remove(attractorObject); attractorObject = null; } };
-            const animate = () => { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); };
+            
+            document.getElementById('toggleModeBtn').onclick = (e) => { 
+                lineState = !lineState; 
+                e.currentTarget.classList.toggle('active'); 
+                document.getElementById('toggleLabel').textContent = lineState ? 'Lines' : 'Points'; 
+                if (attractorObject) renderAttractor(); 
+            };
+            
+            document.getElementById('toggleTwistBtn').onclick = (e) => { 
+                twistMode = !twistMode; 
+                e.currentTarget.classList.toggle('active'); 
+                if (attractorObject) renderAttractor(); 
+            };
+            
+            document.getElementById('clearBtn').onclick = () => { 
+                if (attractorObject) { scene.remove(attractorObject); attractorObject = null; } 
+            };
+            
+            const animate = () => { 
+                requestAnimationFrame(animate); 
+                controls.update(); 
+                renderer.render(scene, camera); 
+            };
             animate();
+            
+            // Initialization draw
+            renderAttractor();
         };
     </script>
 </body>
