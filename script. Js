@@ -2,10 +2,11 @@ let scene, camera, renderer, controls, attractorObject;
 let lineState = true;
 let twistMode = false;
 
-// --- Math Engine ---
-// --- Math Engine (Updated for Dr. Muni's Draft) ---
-const generateLorenzPath = (a, b, c, iterations) => {
-    let x = 0.1, y = 0.1, z = 0.1;
+// --- Math Engine (Updated for Initial Conditions & Transient Burn-In) ---
+const generateLorenzPath = (a, b, c, iterations, x0, y0, z0) => {
+    // Set system entry point to the user's initial boundary conditions
+    let x = x0, y = y0, z = z0;
+    
     const points = [];
     const colors = [];
     
@@ -27,7 +28,7 @@ const generateLorenzPath = (a, b, c, iterations) => {
 
         x = nextX; y = nextY; z = nextZ;
 
-        // Only record and color points after the burn-in period
+        // Only record and color points after the burn-in period has passed
         if (i >= burnIn) {
             const p = new THREE.Vector3(x * 25, y * 25, z * 25);
             points.push(p);
@@ -35,7 +36,7 @@ const generateLorenzPath = (a, b, c, iterations) => {
             const idx = points.length - 1;
 
             if (twistMode && points.length > 3) {
-                // Discrete Torsion calculation
+                // Discrete Torsion calculation using the triple scalar product
                 const v1 = new THREE.Vector3().subVectors(points[idx], points[idx - 1]);
                 const v2 = new THREE.Vector3().subVectors(points[idx - 1], points[idx - 2]);
                 const v3 = new THREE.Vector3().subVectors(points[idx - 2], points[idx - 3]);
@@ -49,7 +50,7 @@ const generateLorenzPath = (a, b, c, iterations) => {
                 const vColor = new THREE.Color().copy(twistColorNeg).lerp(twistColorPos, (twistFactor + 1) / 2);
                 colors.push(vColor.r, vColor.g, vColor.b);
             } else {
-                // Default aesthetic gradient
+                // Default aesthetic gradient maps relative to stabilized indexing
                 const lerpFactor = (i - burnIn) / iterations;
                 const vColor = new THREE.Color().copy(colorStart).lerp(colorEnd, lerpFactor);
                 colors.push(vColor.r, vColor.g, vColor.b);
@@ -63,10 +64,12 @@ function buildAttractorObject(data) {
     const geometry = new THREE.BufferGeometry().setFromPoints(data.points);
     geometry.setAttribute('color', new THREE.Float32BufferAttribute(data.colors, 3));
 
+    const matSettings = { vertexColors: true, transparent: true, opacity: 0.8 };
+
     if (lineState) {
-        return new THREE.Line(geometry, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.8 }));
+        return new THREE.Line(geometry, new THREE.LineBasicMaterial(matSettings));
     } else {
-        return new THREE.Points(geometry, new THREE.PointsMaterial({ vertexColors: true, size: 0.15, transparent: true, opacity: 0.9 }));
+        return new THREE.Points(geometry, new THREE.PointsMaterial({ ...matSettings, size: 0.15, opacity: 0.9 }));
     }
 }
 
@@ -79,7 +82,7 @@ function initThreeJS() {
     camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
     camera.position.set(30, 30, 30);
 
-    renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+    renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, preserveDrawingBuffer: true });
     renderer.setSize(canvas.clientWidth, canvas.clientHeight);
     renderer.setPixelRatio(window.devicePixelRatio);
 
@@ -90,25 +93,63 @@ function initThreeJS() {
 
 function renderAttractor() {
     console.log("Generating Attractor...");
+    
+    // Read System Parameters
     const a = parseFloat(document.getElementById('paramA').value);
     const b = parseFloat(document.getElementById('paramB').value);
     const c = parseFloat(document.getElementById('paramC').value);
+    
+    // Read Initial Boundary Conditions
+    const x0 = parseFloat(document.getElementById('initX').value);
+    const y0 = parseFloat(document.getElementById('initY').value);
+    const z0 = parseFloat(document.getElementById('initZ').value);
+    
     const iters = parseInt(document.getElementById('iterCount').value);
 
+    // Update real-time textual numerical values next to sliders
+    if(document.getElementById('valA')) document.getElementById('valA').textContent = a.toFixed(3);
+    if(document.getElementById('valB')) document.getElementById('valB').textContent = b.toFixed(2);
+    if(document.getElementById('valC')) document.getElementById('valC').textContent = c.toFixed(2);
+    if(document.getElementById('valX0')) document.getElementById('valX0').textContent = x0.toFixed(2);
+    if(document.getElementById('valY0')) document.getElementById('valY0').textContent = y0.toFixed(2);
+    if(document.getElementById('valZ0')) document.getElementById('valZ0').textContent = z0.toFixed(2);
+    if(document.getElementById('valIters')) document.getElementById('valIters').textContent = iters.toLocaleString();
+
+    // Clean up memory before calculation loop runs
     if (attractorObject) {
         scene.remove(attractorObject);
         attractorObject.geometry.dispose();
         attractorObject.material.dispose();
     }
 
-    const data = generateLorenzPath(a, b, c, iters);
+    const data = generateLorenzPath(a, b, c, iters, x0, y0, z0);
     attractorObject = buildAttractorObject(data);
     scene.add(attractorObject);
 }
 
-// Ensure the DOM is fully loaded before attaching listeners
+// Global programmatic bridge for loading professor presets instantly
+window.loadPreset = function(a, b, c, x0, y0, z0) {
+    document.getElementById('paramA').value = a;
+    document.getElementById('paramB').value = b;
+    document.getElementById('paramC').value = c;
+    document.getElementById('initX').value = x0;
+    document.getElementById('initY').value = y0;
+    document.getElementById('initZ').value = z0;
+    renderAttractor();
+};
+
 window.onload = () => {
     initThreeJS();
+
+    // Dynamically bind every input range slider to re-compute on active drag
+    const dynamicInputIDs = ['paramA', 'paramB', 'paramC', 'initX', 'initY', 'initZ', 'iterCount'];
+    dynamicInputIDs.forEach(id => {
+        const inputEl = document.getElementById(id);
+        if (inputEl) {
+            // .oninput executes on every single tick value shift during drag
+            inputEl.oninput = renderAttractor;
+        }
+    });
 
     const genBtn = document.getElementById('generateBtn');
     if (genBtn) genBtn.onclick = renderAttractor;
@@ -148,4 +189,7 @@ window.onload = () => {
         if (renderer && scene && camera) renderer.render(scene, camera);
     }
     animate();
+
+    // Trigger an initial automatic drawing calculation run on loading completion
+    renderAttractor();
 };
