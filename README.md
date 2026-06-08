@@ -145,3 +145,10 @@ This software is a numerical implementation of the models and figures presented 
 ### Output Filenames
 
 Exported files are automatically named to encode all relevant parameters, making figure tracking in Overleaf straightforward. Example:
+Exported files are automatically named to encode all relevant parameters, making figure tracking in LaTeX or Overleaf straightforward. 
+
+**Filename Format Structure:**
+`[Model]_[Parameters]_[Iterations]_[ColorMode]_[Resolution]_[BgColor].png`
+
+**Example Output Filename:**
+`muni-map_a0.015_b0.8_c0.99_100k_twist_4x_white.png`
